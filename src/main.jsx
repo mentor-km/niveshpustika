@@ -12,7 +12,12 @@ import AdminPage from '@/pages/AdminPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import { AuthProvider } from '@/hooks/useAuth';
+import { registerSW } from 'virtual:pwa-register';
 import '@/index.css';
+
+if ('serviceWorker' in navigator) {
+  registerSW({ immediate: true });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -209,17 +209,20 @@ export default function ProfilePage() {
                     </FormItem>
                   )}
                 />
-                <div>
-                  <FormLabel className="text-gray-300">Email</FormLabel>
-                  <div className="relative mt-2">
+                <div className="space-y-2">
+                  <label htmlFor="profile-email" className="text-sm font-medium text-gray-300">
+                    Email
+                  </label>
+                  <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
+                      id="profile-email"
                       value={user?.email || profile.email || ''}
                       disabled
                       className="pl-10 bg-gray-900/50 border-gray-600 text-gray-400"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed here</p>
+                  <p className="text-xs text-gray-500">Email cannot be changed here</p>
                 </div>
                 <Button
                   type="submit"
