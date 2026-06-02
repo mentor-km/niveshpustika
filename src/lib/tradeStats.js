@@ -83,7 +83,7 @@ export function computeSegmentBreakdown(trades = []) {
     }
     breakdown[seg].trades += 1;
     breakdown[seg].pnl += Number(trade.pnl);
-    if Number(trade.pnl) > 0) breakdown[seg].wins += 1;
+    if (Number(trade.pnl) > 0) breakdown[seg].wins += 1;
   });
 
   return Object.values(breakdown)
@@ -104,7 +104,7 @@ export function computeMonthlySummary(trades = []) {
     }
     months[key].trades += 1;
     months[key].pnl += Number(trade.pnl);
-    if Number(trade.pnl) > 0) months[key].wins += 1;
+    if (Number(trade.pnl) > 0) months[key].wins += 1;
   });
 
   return Object.values(months)
