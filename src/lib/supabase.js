@@ -14,7 +14,13 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 export const ADMIN_EMAIL =
   import.meta.env.VITE_ADMIN_EMAIL || 'admin@niveshpustika.in';
 
-export const TRADE_SEGMENTS = ['Equity', 'F&O', 'Commodity', 'Currency', 'Crypto'];
+export const TRADE_SEGMENTS = [
+  'Equity',
+  'Futures',
+  'Options',
+  'Currency',
+  'MCX Commodities',
+];
 
 export function isAdminEmail(email) {
   return email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -97,6 +103,34 @@ export async function updateLastActive(userId) {
     .from('profiles')
     .update({ last_active: new Date().toISOString() })
     .eq('id', userId);
+  if (error) throw error;
+}
+
+// ─── Profile ────────────────────────────────────────────────────────────────
+
+export async function fetchProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfile(userId, { name }) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ name })
+    .eq('id', userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
 }
 

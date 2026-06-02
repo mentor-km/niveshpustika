@@ -7,6 +7,7 @@ import LandingPage from '@/pages/LandingPage';
 import AuthPage from '@/pages/AuthPage';
 import DashboardPage from '@/pages/DashboardPage';
 import TradesPage from '@/pages/TradesPage';
+import ProfilePage from '@/pages/ProfilePage';
 import AdminPage from '@/pages/AdminPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
@@ -56,6 +57,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <TradesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'profile',
+        element: (
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         ),
       },

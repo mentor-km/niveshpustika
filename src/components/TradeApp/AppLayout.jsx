@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { BarChart3, LayoutDashboard, List, LogOut, Plus } from 'lucide-react';
+import { BarChart3, LayoutDashboard, List, LogOut, Plus, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,6 +15,7 @@ import TradeForm from '@/components/TradeApp/TradeForm';
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/trades', label: 'Trades', icon: List },
+  { to: '/profile', label: 'Profile', icon: User },
 ];
 
 export default function AppLayout({ children, showFab = true }) {
@@ -89,7 +90,7 @@ export default function AppLayout({ children, showFab = true }) {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 px-4 py-2 text-xs ${
+                `flex flex-col items-center gap-1 px-3 py-2 text-xs ${
                   isActive ? 'text-emerald-400' : 'text-gray-500'
                 }`
               }
@@ -98,13 +99,6 @@ export default function AppLayout({ children, showFab = true }) {
               {label}
             </NavLink>
           ))}
-          <button
-            onClick={handleLogout}
-            className="flex flex-col items-center gap-1 px-4 py-2 text-xs text-gray-500"
-          >
-            <LogOut className="w-5 h-5" />
-            Logout
-          </button>
         </div>
       </nav>
 
