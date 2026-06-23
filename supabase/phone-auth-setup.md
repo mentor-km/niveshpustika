@@ -1,5 +1,7 @@
 # Phone OTP setup (Supabase)
 
+> **For a full step-by-step guide (Phone + Google, non-technical):** see **[AUTH-SETUP-GUIDE.md](./AUTH-SETUP-GUIDE.md)**
+
 Enable phone authentication so users can sign in with mobile + OTP.
 
 ## 1. Supabase Dashboard

@@ -9,6 +9,8 @@ import DashboardPage from '@/pages/DashboardPage';
 import TradesPage from '@/pages/TradesPage';
 import ProfilePage from '@/pages/ProfilePage';
 import AdminPage from '@/pages/AdminPage';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import TermsOfServicePage from '@/pages/TermsOfServicePage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import { AuthProvider } from '@/hooks/useAuth';
@@ -40,6 +42,14 @@ const router = createBrowserRouter([
       {
         path: 'app',
         element: <AuthPage />,
+      },
+      {
+        path: 'privacy',
+        element: <PrivacyPolicyPage />,
+      },
+      {
+        path: 'terms',
+        element: <TermsOfServicePage />,
       },
       {
         path: 'admin',

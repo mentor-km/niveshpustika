@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Smartphone, Share, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -335,6 +335,17 @@ export default function AuthPage() {
 
             <p className="text-center text-xs text-gray-500 pt-2">
               Standard plan — full access for every user. No payment required.
+            </p>
+            <p className="text-center text-xs text-gray-500">
+              By continuing, you agree to our{' '}
+              <Link to="/terms" className="text-emerald-500 hover:text-emerald-400 hover:underline">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-emerald-500 hover:text-emerald-400 hover:underline">
+                Privacy Policy
+              </Link>
+              .
             </p>
           </CardContent>
         </Card>
