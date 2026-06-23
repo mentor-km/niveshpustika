@@ -9,7 +9,6 @@ const NAV = [
   { label: 'Features', href: '#features' },
   { label: 'Segments', href: '#segments' },
   { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Pricing', href: '#pricing' },
   { label: 'FAQ', href: '#faq' },
 ];
 
@@ -41,7 +40,7 @@ export function LandingHeader() {
               <Link to="/app">Log in</Link>
             </Button>
             <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md shadow-emerald-600/20">
-              <Link to="/app">Start Free Trial</Link>
+              <Link to="/app">Get Started</Link>
             </Button>
           </div>
 
@@ -88,7 +87,7 @@ export function LandingHeader() {
                 <Link to="/app" onClick={() => setOpen(false)}>Log in</Link>
               </Button>
               <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Link to="/app" onClick={() => setOpen(false)}>Start Free Trial</Link>
+                <Link to="/app" onClick={() => setOpen(false)}>Get Started</Link>
               </Button>
             </div>
           </motion.div>

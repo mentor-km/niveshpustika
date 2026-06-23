@@ -32,12 +32,12 @@ const FEATURES = [
   {
     icon: Download,
     title: 'Install as PWA',
-    desc: 'Add to your phone home screen — use it like a native app, no Play Store needed.',
+    desc: 'Add to your phone home screen from the sign-in page — use it like a native app.',
   },
   {
     icon: Bell,
-    title: 'Trial & upgrades',
-    desc: '7-day full access to explore everything before choosing a plan (coming soon).',
+    title: 'Standard plan for all',
+    desc: 'Full access to log trades, dashboard, and analytics. No payments or subscriptions.',
   },
 ];
 

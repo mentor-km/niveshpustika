@@ -6,7 +6,7 @@ const STEPS = [
     step: '01',
     icon: UserPlus,
     title: 'Create your account',
-    desc: 'Sign up in seconds with email. Start your 7-day free trial — no card needed.',
+    desc: 'Sign in with mobile OTP or Google. On mobile, install the PWA for the best experience.',
   },
   {
     step: '02',

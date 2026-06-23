@@ -11,7 +11,7 @@ export function LandingCTA() {
           Ready to journal like a pro?
         </h2>
         <p className="mt-4 text-emerald-100 max-w-xl mx-auto text-lg">
-          Join Nivesh Pustika today. Your first 7 days are on us — full dashboard, all segments, zero risk.
+          Sign in with mobile OTP or Google. Standard plan — full dashboard, all segments, free forever.
         </p>
         <Button
           asChild

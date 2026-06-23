@@ -1,36 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { BarChart3, Mail, KeyRound, User } from 'lucide-react';
+import { Smartphone, Share, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { useToast } from '@/components/ui/use-toast';
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { Logo } from '@/components/Landing/Logo';
 import {
-  signInWithEmail,
+  sendPhoneOtp,
+  verifyPhoneOtp,
   signInWithGoogle,
-  signUpWithEmail,
-  resetPassword,
+  formatPhone,
 } from '@/lib/supabase';
 
 const GoogleIcon = (props) => (
@@ -42,40 +30,103 @@ const GoogleIcon = (props) => (
   </svg>
 );
 
-const loginSchema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(1, 'Password is required'),
-});
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
 
-const signupSchema = z
-  .object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Enter a valid email'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isStandalone() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
+
+function AuthPwaBanner() {
+  const [visible, setVisible] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [ios, setIos] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileDevice() || isStandalone()) return;
+    if (localStorage.getItem('pwa-auth-dismissed') === 'true') return;
+
+    setIos(isIOS());
+
+    const onBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setVisible(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    const timer = setTimeout(() => setVisible(true), 600);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  const dismiss = () => {
+    localStorage.setItem('pwa-auth-dismissed', 'true');
+    setVisible(false);
+  };
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    dismiss();
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-950/50 p-4">
+      <div className="flex items-start gap-3">
+        <Smartphone className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-white">Install for the best mobile experience</p>
+          {ios ? (
+            <p className="text-xs text-gray-400 mt-1">
+              Tap <Share className="inline h-3 w-3" /> Share → <strong className="text-emerald-400">Add to Home Screen</strong>
+            </p>
+          ) : deferredPrompt ? (
+            <Button
+              size="sm"
+              className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+              onClick={handleInstall}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Install App
+            </Button>
+          ) : (
+            <p className="text-xs text-gray-400 mt-1">
+              Use browser menu → <strong className="text-emerald-400">Install app</strong>
+            </p>
+          )}
+        </div>
+        <button type="button" onClick={dismiss} className="text-gray-500 hover:text-gray-300">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function AuthPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const [step, setStep] = useState('phone'); // phone | otp
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [showReset, setShowReset] = useState(false);
-
-  const loginForm = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
-  });
-
-  const signupForm = useForm({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
-  });
+  const [formattedPhone, setFormattedPhone] = useState('');
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -83,91 +134,78 @@ export default function AuthPage() {
     }
   }, [user, authLoading, navigate]);
 
-  const handleLogin = async (values) => {
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid number',
+        description: 'Enter a valid 10-digit Indian mobile number.',
+      });
+      return;
+    }
     setSubmitting(true);
     try {
-      await signInWithEmail(values);
+      const { phone: formatted } = await sendPhoneOtp(phone);
+      setFormattedPhone(formatted);
+      setStep('otp');
       toast({
-        title: 'Login Successful!',
-        description: 'Welcome back! Redirecting to your dashboard.',
+        title: 'OTP Sent',
+        description: `Check SMS on ${formatPhone(phone).replace('+91', '+91 ')}`,
         className: 'bg-emerald-500 text-white',
       });
-      navigate('/dashboard');
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'Invalid email or password.',
+        title: 'Could not send OTP',
+        description: error.message || 'Please try again.',
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleSignUp = async (values) => {
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid OTP',
+        description: 'Enter the 6-digit code from SMS.',
+      });
+      return;
+    }
     setSubmitting(true);
     try {
-      await signUpWithEmail({
-        email: values.email,
-        password: values.password,
-        name: values.name,
-      });
+      await verifyPhoneOtp(formattedPhone || phone, otp);
       toast({
-        title: 'Sign Up Successful!',
-        description: 'Check your email to confirm, then log in.',
+        title: 'Welcome!',
+        description: 'You are signed in.',
         className: 'bg-emerald-500 text-white',
       });
       navigate('/dashboard');
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Sign Up Failed',
-        description: error.message || 'Could not create account.',
+        title: 'Verification failed',
+        description: error.message || 'Check the code and try again.',
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleGoogleAuth = async () => {
+  const handleGoogle = async () => {
     setSubmitting(true);
     try {
       await signInWithGoogle();
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: error.message || 'Could not sign in with Google.',
+        title: 'Google sign-in failed',
+        description: error.message,
       });
-      setSubmitting(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!resetEmail) {
-      toast({
-        variant: 'destructive',
-        title: 'Email Required',
-        description: 'Enter your email to reset your password.',
-      });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await resetPassword(resetEmail);
-      toast({
-        title: 'Reset Email Sent',
-        description: 'Check your inbox for password reset instructions.',
-        className: 'bg-emerald-500 text-white',
-      });
-      setShowReset(false);
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Reset Failed',
-        description: error.message || 'Could not send reset email.',
-      });
-    } finally {
       setSubmitting(false);
     }
   };
@@ -181,45 +219,39 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 p-4">
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: -50 }}
+        initial={{ opacity: 0, y: -24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
         className="w-full max-w-sm"
       >
-        <div className="text-center mb-6">
-          <div className="flex justify-center items-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-3xl font-bold font-heading text-white">Nivesh पुस्तिका</span>
-          </div>
+        <div className="text-center mb-8">
+          <Logo className="h-14 mx-auto" textClassName="!text-white" />
+          <p className="text-gray-400 mt-3 text-sm">Your trading journal — web &amp; mobile</p>
         </div>
 
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-gray-800">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="login">
-            <Card className="bg-gray-900 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-2xl text-white">Welcome Back</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Enter your credentials to access your dashboard.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        <Card className="bg-gray-900 border-gray-700">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-2xl text-white">
+              {step === 'phone' ? 'Sign in' : 'Enter OTP'}
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              {step === 'phone'
+                ? 'Use your mobile number or Google account'
+                : `Code sent to ${formattedPhone.replace('+91', '+91 ')}`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {step === 'phone' ? (
+              <>
                 <Button
                   variant="outline"
-                  className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
-                  onClick={handleGoogleAuth}
+                  className="w-full border-gray-600 text-gray-200 hover:bg-gray-800"
+                  onClick={handleGoogle}
                   disabled={submitting}
                 >
                   <GoogleIcon className="mr-2 h-4 w-4" />
-                  Login with Google
+                  Continue with Google
                 </Button>
 
                 <div className="relative">
@@ -227,232 +259,85 @@ export default function AuthPage() {
                     <span className="w-full border-t border-gray-700" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-gray-900 px-2 text-gray-500">Or continue with</span>
+                    <span className="bg-gray-900 px-2 text-gray-500">Or with mobile</span>
                   </div>
                 </div>
 
-                {showReset ? (
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div>
+                    <label htmlFor="phone" className="text-sm text-gray-300 block mb-2">
+                      Mobile number
+                    </label>
+                    <div className="flex gap-2">
+                      <span className="flex items-center px-3 rounded-md bg-gray-800 border border-gray-600 text-gray-400 text-sm">
+                        +91
+                      </span>
                       <Input
-                        type="email"
-                        placeholder="Email"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        className="pl-10 bg-gray-800 border-gray-600 text-white focus:ring-emerald-500"
+                        id="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="98765 43210"
+                        maxLength={10}
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="bg-gray-800 border-gray-600 text-white flex-1"
+                        required
                       />
                     </div>
-                    <Button
-                      onClick={handleForgotPassword}
-                      disabled={submitting}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3"
-                    >
-                      {submitting ? <Spinner className="mr-2" /> : null}
-                      Send Reset Link
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="w-full text-gray-400"
-                      onClick={() => setShowReset(false)}
-                    >
-                      Back to Login
-                    </Button>
                   </div>
-                ) : (
-                  <Form {...loginForm}>
-                    <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-                      <FormField
-                        control={loginForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-300">Email</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <Input
-                                  type="email"
-                                  placeholder="Email"
-                                  className="pl-10 bg-gray-800 border-gray-600 text-white focus:ring-emerald-500"
-                                  {...field}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-300">Password</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <Input
-                                  type="password"
-                                  placeholder="Password"
-                                  className="pl-10 bg-gray-800 border-gray-600 text-white focus:ring-emerald-500"
-                                  {...field}
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowReset(true)}
-                        className="text-sm text-emerald-400 hover:text-emerald-300"
-                      >
-                        Forgot Password?
-                      </button>
-                      <Button
-                        type="submit"
-                        disabled={submitting}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3"
-                      >
-                        {submitting ? <Spinner className="mr-2" /> : null}
-                        Login
-                      </Button>
-                    </form>
-                  </Form>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="signup">
-            <Card className="bg-gray-900 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-2xl text-white">Create an Account</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Start your 7-day free trial. No credit card required.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button
-                  variant="outline"
-                  className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
-                  onClick={handleGoogleAuth}
-                  disabled={submitting}
-                >
-                  <GoogleIcon className="mr-2 h-4 w-4" />
-                  Sign Up with Google
-                </Button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-700" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-gray-900 px-2 text-gray-500">Or continue with</span>
-                  </div>
+                  <Button
+                    type="submit"
+                    disabled={submitting || phone.length !== 10}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                  >
+                    {submitting ? <Spinner className="mr-2" /> : null}
+                    Send OTP
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="space-y-6">
+                <div className="flex justify-center">
+                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                    <InputOTPGroup>
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <InputOTPSlot
+                          key={i}
+                          index={i}
+                          className="bg-gray-800 border-gray-600 text-white w-10 h-11"
+                        />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
                 </div>
+                <Button
+                  type="submit"
+                  disabled={submitting || otp.length !== 6}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                >
+                  {submitting ? <Spinner className="mr-2" /> : null}
+                  Verify &amp; Continue
+                </Button>
+                <button
+                  type="button"
+                  className="w-full text-sm text-gray-400 hover:text-emerald-400"
+                  onClick={() => {
+                    setStep('phone');
+                    setOtp('');
+                  }}
+                >
+                  Change number
+                </button>
+              </form>
+            )}
 
-                <Form {...signupForm}>
-                  <form onSubmit={signupForm.handleSubmit(handleSignUp)} className="space-y-4">
-                    <FormField
-                      control={signupForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-300">Name</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                              <Input
-                                placeholder="Full Name"
-                                className="pl-10 bg-gray-800 border-gray-600 text-white focus:ring-emerald-500"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-300">Email</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                              <Input
-                                type="email"
-                                placeholder="Email"
-                                className="pl-10 bg-gray-800 border-gray-600 text-white focus:ring-emerald-500"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-300">Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                              <Input
-                                type="password"
-                                placeholder="Password"
-                                className="pl-10 bg-gray-800 border-gray-600 text-white focus:ring-emerald-500"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-gray-300">Confirm Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                              <Input
-                                type="password"
-                                placeholder="Confirm Password"
-                                className="pl-10 bg-gray-800 border-gray-600 text-white focus:ring-emerald-500"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3"
-                    >
-                      {submitting ? <Spinner className="mr-2" /> : null}
-                      Sign Up for Free
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <AuthPwaBanner />
+
+            <p className="text-center text-xs text-gray-500 pt-2">
+              Standard plan — full access for every user. No payment required.
+            </p>
+          </CardContent>
+        </Card>
       </motion.div>
     </div>
   );

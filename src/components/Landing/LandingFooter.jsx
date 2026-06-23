@@ -19,7 +19,7 @@ export function LandingFooter() {
             <ul className="space-y-2 text-sm">
               <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
               <li><a href="#segments" className="hover:text-white transition-colors">Segments</a></li>
-              <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+              <li><a href="#how-it-works" className="hover:text-white transition-colors">How it works</a></li>
               <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
             </ul>
           </div>

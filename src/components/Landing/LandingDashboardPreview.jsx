@@ -9,7 +9,7 @@ const METRICS = [
   'P&L breakdown by segment',
   'Top winners & worst losers',
   'Monthly performance table',
-  'Profile & trial management',
+  'Profile & account management',
 ];
 
 export function LandingDashboardPreview() {

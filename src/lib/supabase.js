@@ -14,6 +14,9 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 export const ADMIN_EMAIL =
   import.meta.env.VITE_ADMIN_EMAIL || 'admin@niveshpustika.in';
 
+export const ADMIN_PHONE =
+  import.meta.env.VITE_ADMIN_PHONE || '';
+
 export const TRADE_SEGMENTS = [
   'Equity',
   'Futures',
@@ -24,6 +27,35 @@ export const TRADE_SEGMENTS = [
 
 export function isAdminEmail(email) {
   return email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
+
+/** Format 10-digit Indian mobile to E.164 (+91...) */
+export function formatPhone(phone) {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('91') && digits.length === 12) return `+${digits}`;
+  if (digits.length === 10) return `+91${digits}`;
+  if (phone.startsWith('+')) return phone;
+  return `+${digits}`;
+}
+
+export function isAdminUser(user) {
+  if (!user) return false;
+  if (user.email && isAdminEmail(user.email)) return true;
+  if (ADMIN_PHONE && user.phone && formatPhone(user.phone) === formatPhone(ADMIN_PHONE)) {
+    return true;
+  }
+  return false;
+}
+
+export function displayPhone(user) {
+  const raw = user?.phone || user?.user_metadata?.phone || '';
+  if (!raw) return user?.email || '—';
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length >= 10) {
+    const local = digits.slice(-10);
+    return `+91 ${local.slice(0, 5)} ${local.slice(5)}`;
+  }
+  return raw;
 }
 
 export function calculatePnL({ direction, entry_price, exit_price, quantity }) {
@@ -53,22 +85,22 @@ export async function getSession() {
   return data.session;
 }
 
-export async function signUpWithEmail({ email, password, name }) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { name },
-    },
+export async function sendPhoneOtp(phone) {
+  const formatted = formatPhone(phone);
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone: formatted,
+    options: { channel: 'sms' },
   });
   if (error) throw error;
-  return data;
+  return { phone: formatted, data };
 }
 
-export async function signInWithEmail({ email, password }) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+export async function verifyPhoneOtp(phone, token) {
+  const formatted = formatPhone(phone);
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone: formatted,
+    token,
+    type: 'sms',
   });
   if (error) throw error;
   return data;
@@ -88,14 +120,6 @@ export async function signInWithGoogle() {
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
-}
-
-export async function resetPassword(email) {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/app`,
-  });
-  if (error) throw error;
-  return data;
 }
 
 export async function updateLastActive(userId) {
@@ -127,11 +151,6 @@ export async function updateProfile(userId, { name }) {
     .single();
   if (error) throw error;
   return data;
-}
-
-export async function updatePassword(newPassword) {
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) throw error;
 }
 
 // ─── Trades ─────────────────────────────────────────────────────────────────

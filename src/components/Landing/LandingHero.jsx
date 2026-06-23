@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 const highlights = [
   { icon: TrendingUp, text: 'Equity curve & segment analytics' },
   { icon: Smartphone, text: 'Web + installable PWA on mobile' },
-  { icon: ShieldCheck, text: 'Secure cloud sync with Supabase' },
+  { icon: ShieldCheck, text: 'Sign in with mobile OTP or Google' },
 ];
 
 export function LandingHero() {
@@ -33,7 +33,7 @@ export function LandingHero() {
             </h1>
             <p className="mt-6 text-lg text-slate-600 leading-relaxed max-w-xl">
               Nivesh Pustika helps Indian traders record Equity, Futures, Options, Currency &amp; MCX
-              trades — then turns them into dashboards, P&amp;L insights, and a journal you can trust.
+              trades — then turns them into dashboards and P&amp;L insights you can trust.
             </p>
 
             <ul className="mt-8 space-y-3">
@@ -54,7 +54,7 @@ export function LandingHero() {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-base h-12 px-8 shadow-lg shadow-emerald-600/25"
               >
                 <Link to="/app">
-                  Start 7-Day Free Trial
+                  Get Started Free
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -67,7 +67,7 @@ export function LandingHero() {
                 <a href="#how-it-works">See how it works</a>
               </Button>
             </div>
-            <p className="mt-4 text-sm text-slate-500">No credit card required · Full access during trial</p>
+            <p className="mt-4 text-sm text-slate-500">Standard plan · Full access · No payment required</p>
           </motion.div>
 
           <motion.div

@@ -9,7 +9,11 @@ import {
 const FAQS = [
   {
     q: 'What is Nivesh Pustika?',
-    a: 'Nivesh Pustika is a trading journal built for Indian markets. Log trades across Equity, Futures, Options, Currency and MCX Commodities, then review performance on a detailed dashboard.',
+    a: 'Nivesh Pustika is a trading tracker for Indian markets. Log trades across Equity, Futures, Options, Currency and MCX Commodities, then review performance on your dashboard.',
+  },
+  {
+    q: 'How do I sign up?',
+    a: 'Use your mobile number — we send an OTP to verify. You can also continue with Google. On mobile, install the PWA from the sign-in page for an app-like experience.',
   },
   {
     q: 'Which segments are supported?',
@@ -17,19 +21,15 @@ const FAQS = [
   },
   {
     q: 'Can I use it on my phone?',
-    a: 'Yes. Nivesh Pustika is a Progressive Web App (PWA). Open it in your mobile browser and use "Add to Home Screen" to install it like an app.',
+    a: 'Yes. After signing in on mobile, install Nivesh Pustika to your home screen (PWA). It works like a native app — no Play Store needed.',
   },
   {
-    q: 'Is there a free trial?',
-    a: 'Yes — every new account gets a 7-day free trial with full access to all dashboard features. No credit card is required to sign up.',
-  },
-  {
-    q: 'What happens after the trial?',
-    a: 'You can continue logging trades and viewing a basic dashboard for free. The full detailed analytics dashboard will require a subscription (coming soon).',
+    q: 'Is there a cost?',
+    a: 'No. Every user is on the Standard plan with full access — log trades, dashboard, analytics, and profile. No payments or subscriptions.',
   },
   {
     q: 'Is my data secure?',
-    a: 'Your data is stored securely in the cloud with encrypted authentication. Only you can access your trades unless you use the admin panel (owner only).',
+    a: 'Your data is stored securely in the cloud with encrypted authentication. Only you can access your trades.',
   },
 ];
 

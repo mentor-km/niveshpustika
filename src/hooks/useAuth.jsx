@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { supabase, isAdminEmail, updateLastActive } from '@/lib/supabase';
+import { supabase, isAdminUser, updateLastActive } from '@/lib/supabase';
 
 const AuthContext = createContext(null);
 
@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
       user,
       session,
       loading,
-      isAdmin: isAdminEmail(user?.email),
+      isAdmin: isAdminUser(user),
     }),
     [user, session, loading]
   );
