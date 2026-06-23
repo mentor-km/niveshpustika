@@ -209,12 +209,23 @@ export async function fetchAdminStats() {
 }
 
 export async function fetchAllUsers() {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*, trades(count)')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  const [profilesResult, tradesResult] = await Promise.all([
+    supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+    supabase.from('trades').select('user_id'),
+  ]);
+
+  if (profilesResult.error) throw profilesResult.error;
+  if (tradesResult.error) throw tradesResult.error;
+
+  const tradeCountByUser = (tradesResult.data ?? []).reduce((acc, trade) => {
+    acc[trade.user_id] = (acc[trade.user_id] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (profilesResult.data ?? []).map((profile) => ({
+    ...profile,
+    trades: [{ count: tradeCountByUser[profile.id] ?? 0 }],
+  }));
 }
 
 export async function fetchTradesByUserId(userId) {

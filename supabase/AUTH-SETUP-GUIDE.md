@@ -195,6 +195,125 @@ https://YOUR-PROJECT-REF.supabase.co/auth/v1/callback
 
 ---
 
+## Part 3B — Fix: Google shows your Supabase URL (not Nivesh Pustika)
+
+### Why this happens
+
+When users click **Continue with Google**, Google briefly shows a screen like:
+
+> **Sign in to continue to** `abcdefghij.supabase.co`
+
+That is **normal** with Supabase. Google login works through Supabase’s servers, so Google displays the **callback domain** (`*.supabase.co`), not `niveshpustika.in`.
+
+Your app is fine — this is a **branding/trust** issue, not a bug.
+
+---
+
+### Option 1 — Free: improve Google branding (do this first)
+
+This makes the screen show **“Nivesh Pustika”** with your logo. The small “continue to supabase.co” line may still appear, but the app name looks professional.
+
+1. Go to **https://console.cloud.google.com**
+2. Select your **Nivesh Pustika** project
+3. Left menu → **Google Auth Platform** (or **APIs & Services** → **OAuth consent screen**)
+4. Open **Branding** and fill in:
+
+| Field | Value |
+|-------|--------|
+| App name | `Nivesh Pustika` |
+| User support email | `contact@niveshpustika.in` |
+| App logo | Upload your logo (`public/logo.png` from the project) |
+| Application home page | `https://niveshpustika.in` |
+| Privacy policy | `https://niveshpustika.in/privacy` |
+| Terms of service | `https://niveshpustika.in/terms` |
+
+5. Under **Authorized domains**, add:
+   - `niveshpustika.in`
+   - `supabase.co` (required while using Supabase auth)
+
+6. Click **Save**
+
+7. **Optional but recommended:** Submit for **Brand verification** (Google may take a few business days). Verified apps look more trustworthy.
+
+8. When ready for public users: change **Publishing status** from **Testing** to **In production** (OAuth consent screen → **Publish app**).
+
+> **Note:** Branding improves the main title. To fully replace `supabase.co` with your own domain, use Option 2 below.
+
+---
+
+### Option 2 — Best fix: Supabase custom domain (paid)
+
+To show **`auth.niveshpustika.in`** (or similar) instead of `xxxxx.supabase.co`, you need a **Supabase Custom Domain**. This is a **paid add-on** on Supabase Pro plan (~$25/month + domain add-on fee).
+
+**What users will see after setup:**
+
+> **Sign in to continue to** `auth.niveshpustika.in`
+
+That matches your brand much better.
+
+#### Step-by-step (overview)
+
+1. **Upgrade Supabase** to Pro (if not already)  
+   Supabase Dashboard → **Settings** → **Billing**
+
+2. **Pick a subdomain** (recommended: `auth.niveshpustika.in`)
+
+3. **Supabase Dashboard** → **Project Settings** → **General** → **Custom Domains**  
+   Follow the wizard to add `auth.niveshpustika.in`
+
+4. **DNS (where you bought niveshpustika.in — e.g. GoDaddy, Cloudflare, Namecheap):**
+   - Add **CNAME** record:
+     - Name/Host: `auth`
+     - Points to: `YOUR-PROJECT-REF.supabase.co` (Supabase shows the exact value)
+   - Add **TXT** records Supabase gives you (to prove you own the domain)
+   - Wait 15–60 minutes for DNS to propagate
+
+5. **Activate** the custom domain in Supabase when verification passes
+
+6. **Google Cloud Console** → your OAuth client → **Authorized redirect URIs**  
+   Add the **new** callback URL (keep the old one too during transition):
+   ```
+   https://auth.niveshpustika.in/auth/v1/callback
+   ```
+
+7. **Vercel** → Project → **Settings** → **Environment Variables**  
+   Update:
+   ```
+   VITE_SUPABASE_URL=https://auth.niveshpustika.in
+   ```
+   (Keep the same anon key — only the URL changes.)
+
+8. **Redeploy** on Vercel (Deployments → Redeploy)
+
+9. Test Google login again — Google should now show `auth.niveshpustika.in`
+
+#### Also update locally
+
+In your `.env.local`:
+```
+VITE_SUPABASE_URL=https://auth.niveshpustika.in
+```
+
+---
+
+### Option 3 — Cheaper alternative: vanity subdomain (still says supabase.co)
+
+Supabase Pro also offers a **vanity subdomain** like `niveshpustika.supabase.co` instead of random letters. It looks slightly cleaner but **still contains “supabase.co”**. Custom domain (Option 2) is better for a public product.
+
+---
+
+### Quick comparison
+
+| Option | Cost | What Google shows | Effort |
+|--------|------|-------------------|--------|
+| **1. Google branding** | Free | App name “Nivesh Pustika” + may still show `*.supabase.co` | 15 min |
+| **2. Custom domain** | Supabase Pro + add-on | `auth.niveshpustika.in` | 1–2 hours |
+| **3. Vanity subdomain** | Supabase Pro | `niveshpustika.supabase.co` | CLI setup |
+
+**Recommendation:** Do **Option 1 today** (free). Plan **Option 2** when you want a fully branded login for all users.
+
+---
+
 # PART B — Phone OTP Setup (Twilio)
 
 ---
@@ -245,7 +364,31 @@ If you are on a **free trial**:
 
 Until you upgrade Twilio, OTP will only work for **verified numbers**.
 
-### Step 5.4 — Get Twilio credentials for Supabase
+### Step 5.4 — Create a Messaging Service (required by Supabase)
+
+Supabase no longer asks for your phone number directly. Instead, you create a **Messaging Service** in Twilio and paste its **SID** (starts with `MG`).
+
+1. Twilio Console → **Messaging** → **Services**
+2. Click **Create Messaging Service**
+3. **Friendly name:** `Nivesh Pustika OTP` (any name is fine)
+4. **Use case:** pick **Notify my users** (or similar)
+5. Click **Create Messaging Service**
+
+6. On the next screen — **Add Senders**:
+   - Click **Add Senders**
+   - Choose **Phone Number**
+   - Check your **US number** (the one you bought)
+   - Click **Add phone numbers**
+
+7. Click through any remaining steps (compliance can often be skipped for now) until finished
+
+8. Open your new Messaging Service → find **Messaging Service SID**
+   - Starts with `MG...`
+   - **Copy and save it**
+
+> Your US phone number lives *inside* this Messaging Service. Supabase uses the `MG...` SID to send SMS through that number.
+
+### Step 5.5 — Get Twilio credentials for Supabase
 
 1. Twilio Console **Dashboard** (home page)
 2. Copy and save:
@@ -254,8 +397,7 @@ Until you upgrade Twilio, OTP will only work for **verified numbers**.
 |------|--------|
 | **Account SID** | Dashboard — starts with `AC...` |
 | **Auth Token** | Dashboard — click to reveal |
-
-3. Your **Twilio Phone Number** from Step 5.1 (the `+1...` number)
+| **Message Service SID** | Messaging → Services → your service — starts with `MG...` |
 
 ---
 
@@ -271,12 +413,23 @@ Until you upgrade Twilio, OTP will only work for **verified numbers**.
 |-------|--------|
 | Twilio Account SID | Your `AC...` value |
 | Twilio Auth Token | Your auth token |
-| Twilio Message Service SID | **Leave empty** if you don't have one |
-| Twilio Phone Number | Your US number e.g. `+15551234567` |
+| Twilio Message Service SID | Your `MG...` value from Step 5.4 |
+| Content SID | **Leave empty** (only needed for WhatsApp templates) |
+| Test Phone Numbers and OTPs | **Optional** — see below |
 
 6. Click **Save**
 
-> **Note:** Use either **Message Service SID** OR **Phone Number**, not both. For simplicity, use **Phone Number** only.
+> **Note:** Supabase uses **Message Service SID**, not the phone number field. Your US number must be added to that Messaging Service in Twilio (Step 5.4).
+
+### Test Phone Numbers (optional — for quick testing)
+
+In **Test Phone Numbers and OTPs**, you can add a fake test entry so Supabase accepts a fixed OTP without sending a real SMS:
+
+```
+919876543210=123456
+```
+
+Format: `10-digit-number=fixed-otp` (no +91). Useful on Twilio trial. For real SMS testing, leave this empty.
 
 ### Optional — Phone settings
 

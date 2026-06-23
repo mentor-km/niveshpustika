@@ -11,10 +11,10 @@ create table if not exists public.profiles (
   created_at timestamptz default now()
 );
 
--- Trades
+-- Trades (user_id → profiles so admin embeds work in PostgREST)
 create table if not exists public.trades (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
   segment text not null,
   symbol text not null,
   entry_price numeric not null,
@@ -29,6 +29,21 @@ create table if not exists public.trades (
 
 alter table public.profiles enable row level security;
 alter table public.trades enable row level security;
+
+-- Admin check: email OR phone (must match VITE_ADMIN_EMAIL / VITE_ADMIN_PHONE)
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+set search_path = public
+as $$
+  select
+    lower(coalesce(auth.jwt() ->> 'email', '')) = 'contact@niveshpustika.in'
+    or right(
+      regexp_replace(coalesce(auth.jwt() ->> 'phone', ''), '[^0-9]', '', 'g'),
+      10
+    ) = '8109901136'
+$$;
 
 -- Profiles policies (drop first so this file can be re-run safely)
 drop policy if exists "Users can view own profile" on public.profiles;
@@ -50,7 +65,7 @@ create policy "Users can insert own profile"
 
 create policy "Admin can view all profiles"
   on public.profiles for select
-  using (auth.jwt() ->> 'email' = 'contact@niveshpustika.in');
+  using (public.is_admin());
 
 -- Trades policies
 drop policy if exists "Users can view own trades" on public.trades;
@@ -77,7 +92,7 @@ create policy "Users can delete own trades"
 
 create policy "Admin can view all trades"
   on public.trades for select
-  using (auth.jwt() ->> 'email' = 'contact@niveshpustika.in');
+  using (public.is_admin());
 
 -- Auto-create profile on signup
 create or replace function public.handle_new_user()
