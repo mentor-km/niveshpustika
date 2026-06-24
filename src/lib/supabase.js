@@ -22,8 +22,47 @@ export const TRADE_SEGMENTS = [
   'Futures',
   'Options',
   'Currency',
-  'MCX Commodities',
+  'Commodities',
 ];
+
+export const EQUITY_SEGMENT = 'Equity';
+
+export function isEquitySegment(segment) {
+  return segment === EQUITY_SEGMENT;
+}
+
+/** Total units for P&L: shares for equity, lot_size × lots for derivatives. */
+export function effectiveQuantity({ segment, quantity, lot_size, lots }) {
+  if (isEquitySegment(segment)) {
+    return Number(quantity);
+  }
+  return Number(lot_size) * Number(lots);
+}
+
+export function formatTradeSize(trade) {
+  if (!trade) return '—';
+  if (isEquitySegment(trade.segment)) {
+    return `${trade.quantity} shares`;
+  }
+  if (trade.lot_size != null && trade.lots != null) {
+    return `${trade.lots} lots × ${trade.lot_size}`;
+  }
+  return `${trade.quantity} qty`;
+}
+
+export function dateInputToIso(dateStr) {
+  if (!dateStr) return new Date().toISOString();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0).toISOString();
+}
+
+export function isoToDateInput(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60 * 1000);
+  return local.toISOString().slice(0, 10);
+}
 
 export function isAdminEmail(email) {
   return email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -58,10 +97,12 @@ export function displayPhone(user) {
   return raw;
 }
 
-export function calculatePnL({ direction, entry_price, exit_price, quantity }) {
+export function calculatePnL({ direction, entry_price, exit_price, quantity, segment, lot_size, lots }) {
   const entry = Number(entry_price);
   const exit = Number(exit_price);
-  const qty = Number(quantity);
+  const qty = segment
+    ? effectiveQuantity({ segment, quantity, lot_size, lots })
+    : Number(quantity);
 
   if (direction === 'long') {
     return (exit - entry) * qty;

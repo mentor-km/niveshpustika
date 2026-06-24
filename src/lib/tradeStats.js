@@ -69,7 +69,7 @@ export function computeEquityCurve(trades = []) {
 }
 
 export function computeSegmentBreakdown(trades = []) {
-  const segments = [...TRADE_SEGMENTS, 'F&O', 'Commodity', 'Crypto'];
+  const segments = [...TRADE_SEGMENTS, 'MCX Commodities', 'F&O', 'Commodity', 'Crypto'];
 
   const breakdown = segments.reduce((acc, seg) => {
     acc[seg] = { segment: seg, trades: 0, pnl: 0, wins: 0 };

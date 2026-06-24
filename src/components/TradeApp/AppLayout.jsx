@@ -8,6 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import { Logo } from '@/components/Landing/Logo';
 import { signOut } from '@/lib/supabase';
@@ -99,13 +105,26 @@ export default function AppLayout({ children, showFab = true }) {
       </nav>
 
       {showFab && (
-        <Button
-          onClick={() => setShowTradeForm(true)}
-          className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 w-14 h-14 rounded-full bg-[#2d8b8b] hover:bg-[#267a7a] shadow-lg shadow-teal-900/25"
-          size="icon"
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setShowTradeForm(true)}
+                aria-label="Add a new trade"
+                className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 w-14 h-14 rounded-full bg-[#2d8b8b] hover:bg-[#267a7a] shadow-lg shadow-teal-900/25"
+                size="icon"
+              >
+                <Plus className="w-6 h-6" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="left"
+              className="bg-slate-800 text-white border-0 shadow-lg mb-2 md:mb-0"
+            >
+              Add a new trade
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
 
       <Dialog open={showTradeForm} onOpenChange={setShowTradeForm}>

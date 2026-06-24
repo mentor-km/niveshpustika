@@ -29,29 +29,106 @@ import {
   createTrade,
   updateTrade,
   formatCurrency,
+  isEquitySegment,
+  effectiveQuantity,
+  dateInputToIso,
+  isoToDateInput,
 } from '@/lib/supabase';
 
-const tradeSchema = z.object({
-  segment: z.string().min(1, 'Select a segment'),
-  symbol: z.string().min(1, 'Symbol is required'),
-  entry_price: z.coerce.number().positive('Entry price must be positive'),
-  exit_price: z.coerce.number().positive('Exit price must be positive'),
-  quantity: z.coerce.number().int().positive('Quantity must be positive'),
-  direction: z.enum(['long', 'short'], { required_error: 'Select direction' }),
-  entry_time: z.string().min(1, 'Entry time is required'),
-  exit_time: z.string().min(1, 'Exit time is required'),
-});
+const tradeSchema = z
+  .object({
+    segment: z.string().min(1, 'Select a segment'),
+    symbol: z.string().min(1, 'Symbol is required'),
+    entry_price: z.coerce.number().positive('Entry price must be positive'),
+    exit_price: z.coerce.number().positive('Exit price must be positive'),
+    direction: z.enum(['long', 'short'], { required_error: 'Select direction' }),
+    entry_date: z.string().min(1, 'Entry date is required'),
+    exit_date: z.string().min(1, 'Exit date is required'),
+    quantity: z.coerce.number().optional(),
+    lot_size: z.coerce.number().optional(),
+    lots: z.coerce.number().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (isEquitySegment(data.segment)) {
+      if (!data.quantity || data.quantity <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Number of shares is required',
+          path: ['quantity'],
+        });
+      }
+    } else if (data.segment) {
+      if (!data.lot_size || data.lot_size <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Lot size is required',
+          path: ['lot_size'],
+        });
+      }
+      if (!data.lots || data.lots <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Number of lots is required',
+          path: ['lots'],
+        });
+      }
+    }
+  });
 
 const inputClass = 'bg-white border-teal-200 text-slate-800';
 const labelClass = 'text-slate-600';
 const selectContentClass = 'bg-white border-teal-200 text-slate-800';
 
-function toDatetimeLocalValue(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  const offset = date.getTimezoneOffset();
-  const local = new Date(date.getTime() - offset * 60 * 1000);
-  return local.toISOString().slice(0, 16);
+function tradeToFormValues(trade) {
+  if (!trade) {
+    const today = isoToDateInput(new Date().toISOString());
+    return {
+      segment: '',
+      symbol: '',
+      entry_price: '',
+      exit_price: '',
+      direction: 'long',
+      entry_date: today,
+      exit_date: today,
+      quantity: '',
+      lot_size: '',
+      lots: '',
+    };
+  }
+
+  const isEquity = isEquitySegment(trade.segment);
+  return {
+    segment: trade.segment,
+    symbol: trade.symbol,
+    entry_price: trade.entry_price,
+    exit_price: trade.exit_price,
+    direction: trade.direction,
+    entry_date: isoToDateInput(trade.entry_time),
+    exit_date: isoToDateInput(trade.exit_time),
+    quantity: isEquity ? trade.quantity : '',
+    lot_size: !isEquity && trade.lot_size != null ? trade.lot_size : '',
+    lots: !isEquity && trade.lots != null ? trade.lots : '',
+  };
+}
+
+function buildPayload(userId, values) {
+  const qty = effectiveQuantity(values);
+  const isEquity = isEquitySegment(values.segment);
+
+  return {
+    user_id: userId,
+    segment: values.segment,
+    symbol: values.symbol.toUpperCase(),
+    entry_price: values.entry_price,
+    exit_price: values.exit_price,
+    quantity: qty,
+    lot_size: isEquity ? null : values.lot_size,
+    lots: isEquity ? null : values.lots,
+    direction: values.direction,
+    entry_time: dateInputToIso(values.entry_date),
+    exit_time: dateInputToIso(values.exit_date),
+    pnl: calculatePnL({ ...values, quantity: qty }),
+  };
 }
 
 export default function TradeForm({ trade, onSuccess, onCancel }) {
@@ -62,25 +139,19 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
 
   const form = useForm({
     resolver: zodResolver(tradeSchema),
-    defaultValues: {
-      segment: trade?.segment ?? '',
-      symbol: trade?.symbol ?? '',
-      entry_price: trade?.entry_price ?? '',
-      exit_price: trade?.exit_price ?? '',
-      quantity: trade?.quantity ?? '',
-      direction: trade?.direction ?? 'long',
-      entry_time: toDatetimeLocalValue(trade?.entry_time) || toDatetimeLocalValue(new Date().toISOString()),
-      exit_time: toDatetimeLocalValue(trade?.exit_time) || toDatetimeLocalValue(new Date().toISOString()),
-    },
+    defaultValues: tradeToFormValues(trade),
   });
 
   const watched = useWatch({ control: form.control });
+  const isEquity = isEquitySegment(watched.segment);
 
   const pnl = useMemo(() => {
-    const { direction, entry_price, exit_price, quantity } = watched;
-    if (!entry_price || !exit_price || !quantity || !direction) return null;
+    const { direction, entry_price, exit_price, segment, quantity, lot_size, lots } = watched;
+    if (!entry_price || !exit_price || !direction || !segment) return null;
     try {
-      return calculatePnL({ direction, entry_price, exit_price, quantity });
+      const qty = effectiveQuantity({ segment, quantity, lot_size, lots });
+      if (!qty || qty <= 0) return null;
+      return calculatePnL({ direction, entry_price, exit_price, segment, quantity, lot_size, lots });
     } catch {
       return null;
     }
@@ -88,19 +159,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
 
   const mutation = useMutation({
     mutationFn: async (values) => {
-      const payload = {
-        user_id: user.id,
-        segment: values.segment,
-        symbol: values.symbol.toUpperCase(),
-        entry_price: values.entry_price,
-        exit_price: values.exit_price,
-        quantity: values.quantity,
-        direction: values.direction,
-        entry_time: new Date(values.entry_time).toISOString(),
-        exit_time: new Date(values.exit_time).toISOString(),
-        pnl: calculatePnL(values),
-      };
-
+      const payload = buildPayload(user.id, values);
       if (isEditing) {
         return updateTrade(trade.id, payload);
       }
@@ -115,7 +174,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
           : 'Your trade has been logged successfully.',
         className: 'bg-[#2d8b8b] text-white',
       });
-      form.reset();
+      form.reset(tradeToFormValues(null));
       onSuccess?.();
     },
     onError: (error) => {
@@ -129,16 +188,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
 
   useEffect(() => {
     if (trade) {
-      form.reset({
-        segment: trade.segment,
-        symbol: trade.symbol,
-        entry_price: trade.entry_price,
-        exit_price: trade.exit_price,
-        quantity: trade.quantity,
-        direction: trade.direction,
-        entry_time: toDatetimeLocalValue(trade.entry_time),
-        exit_time: toDatetimeLocalValue(trade.exit_time),
-      });
+      form.reset(tradeToFormValues(trade));
     }
   }, [trade, form]);
 
@@ -151,7 +201,15 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
           render={({ field }) => (
             <FormItem>
               <FormLabel className={labelClass}>Segment</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select
+                onValueChange={(val) => {
+                  field.onChange(val);
+                  form.setValue('quantity', '');
+                  form.setValue('lot_size', '');
+                  form.setValue('lots', '');
+                }}
+                value={field.value}
+              >
                 <FormControl>
                   <SelectTrigger className={inputClass}>
                     <SelectValue placeholder="Select segment" />
@@ -178,7 +236,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
               <FormLabel className={labelClass}>Symbol</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="e.g. RELIANCE"
+                  placeholder="e.g. RELIANCE, NIFTY, GOLD"
                   className={`${inputClass} uppercase`}
                   {...field}
                 />
@@ -217,52 +275,110 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="quantity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className={labelClass}>Quantity</FormLabel>
-                <FormControl>
-                  <Input type="number" className={inputClass} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="direction"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className={labelClass}>Direction</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+        {!watched.segment ? (
+          <p className="text-sm text-slate-500 rounded-lg bg-teal-50/80 border border-teal-100 px-3 py-2">
+            Select a segment to enter size and direction.
+          </p>
+        ) : isEquity ? (
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClass}>No. of Shares</FormLabel>
                   <FormControl>
-                    <SelectTrigger className={inputClass}>
-                      <SelectValue placeholder="Direction" />
-                    </SelectTrigger>
+                    <Input type="number" min="1" className={inputClass} {...field} />
                   </FormControl>
-                  <SelectContent className={selectContentClass}>
-                    <SelectItem value="long">Long</SelectItem>
-                    <SelectItem value="short">Short</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="direction"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClass}>Direction</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className={inputClass}>
+                        <SelectValue placeholder="Direction" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className={selectContentClass}>
+                      <SelectItem value="long">Long</SelectItem>
+                      <SelectItem value="short">Short</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="lot_size"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>Lot Size</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="1" className={inputClass} placeholder="e.g. 50" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lots"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className={labelClass}>No. of Lots</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="1" className={inputClass} placeholder="e.g. 2" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="direction"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClass}>Direction</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className={inputClass}>
+                        <SelectValue placeholder="Direction" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className={selectContentClass}>
+                      <SelectItem value="long">Long</SelectItem>
+                      <SelectItem value="short">Short</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="entry_time"
+            name="entry_date"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClass}>Entry Time</FormLabel>
+                <FormLabel className={labelClass}>Entry Date</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" className={inputClass} {...field} />
+                  <Input type="date" className={inputClass} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -270,12 +386,12 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
           />
           <FormField
             control={form.control}
-            name="exit_time"
+            name="exit_date"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClass}>Exit Time</FormLabel>
+                <FormLabel className={labelClass}>Exit Date</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" className={inputClass} {...field} />
+                  <Input type="date" className={inputClass} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -298,7 +414,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             <Button
               type="button"
               variant="outline"
-              className="flex-1 border-teal-200 text-slate-600 hover:bg-teal-50 hover:!text-slate-800"
+              className="flex-1 border-teal-200 text-slate-600 hover:bg-teal-50 hover:text-slate-800"
               onClick={onCancel}
             >
               Cancel

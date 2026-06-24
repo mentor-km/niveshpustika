@@ -44,6 +44,7 @@ import {
   deleteTrade,
   fetchTrades,
   formatCurrency,
+  formatTradeSize,
 } from '@/lib/supabase';
 
 const CARD = 'bg-white/90 backdrop-blur-sm border-teal-200/60 shadow-lg shadow-teal-900/5';
@@ -139,7 +140,7 @@ export default function TradeList({ userId: overrideUserId }) {
                       <TableHead className="text-slate-500">Date</TableHead>
                       <TableHead className="text-slate-500">Symbol</TableHead>
                       <TableHead className="text-slate-500">Direction</TableHead>
-                      <TableHead className="text-slate-500">Qty</TableHead>
+                      <TableHead className="text-slate-500">Size</TableHead>
                       <TableHead className="text-slate-500">Entry</TableHead>
                       <TableHead className="text-slate-500">Exit</TableHead>
                       <TableHead className="text-slate-500">P&L</TableHead>
@@ -164,7 +165,7 @@ export default function TradeList({ userId: overrideUserId }) {
                             {trade.direction}
                           </span>
                         </TableCell>
-                        <TableCell className="text-slate-600">{trade.quantity}</TableCell>
+                        <TableCell className="text-slate-600">{formatTradeSize(trade)}</TableCell>
                         <TableCell className="text-slate-600">{trade.entry_price}</TableCell>
                         <TableCell className="text-slate-600">{trade.exit_price}</TableCell>
                         <TableCell
@@ -223,8 +224,8 @@ export default function TradeList({ userId: overrideUserId }) {
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs text-slate-500 mb-3">
                       <div>
-                        <span className="block text-slate-400">Dir</span>
-                        <span className="capitalize text-slate-600">{trade.direction}</span>
+                        <span className="block text-slate-400">Size</span>
+                        <span className="text-slate-600">{formatTradeSize(trade)}</span>
                       </div>
                       <div>
                         <span className="block text-slate-400">Entry</span>

@@ -20,6 +20,8 @@ create table if not exists public.trades (
   entry_price numeric not null,
   exit_price numeric not null,
   quantity integer not null,
+  lot_size integer,
+  lots integer,
   direction text not null check (direction in ('long', 'short')),
   entry_time timestamptz not null,
   exit_time timestamptz not null,
