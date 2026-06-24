@@ -125,7 +125,7 @@ export default function ProfilePage() {
               Member since {format(new Date(profile.created_at), 'dd MMM yyyy')}
             </div>
             {isAdmin && (
-              <Button asChild variant="outline" className="w-full border-teal-200 text-[#2d8b8b] hover:bg-teal-50">
+              <Button asChild variant="outline" className="w-full border-teal-200 text-[#2d8b8b] hover:bg-teal-50 hover:text-[#2d8b8b]">
                 <Link to="/admin">
                   <Settings className="w-4 h-4 mr-2" />
                   Open Admin Panel
