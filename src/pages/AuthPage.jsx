@@ -21,6 +21,27 @@ import {
 } from '@/lib/supabase';
 import { isMobileDevice, isIOS, isAndroid, isStandalone } from '@/lib/pwa';
 
+const OTP_COOLDOWN_SECONDS = 60;
+
+function parseAuthErrorFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const hashParams = new URLSearchParams(hash);
+  const raw =
+    params.get('error_description') ||
+    params.get('error') ||
+    hashParams.get('error_description') ||
+    hashParams.get('error');
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, ' '));
+  } catch {
+    return raw;
+  }
+}
+
 const GoogleIcon = (props) => (
   <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -125,6 +146,27 @@ export default function AuthPage() {
   const [otp, setOtp] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formattedPhone, setFormattedPhone] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    const authError = parseAuthErrorFromUrl();
+    if (authError) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign-in failed',
+        description: authError,
+      });
+      window.history.replaceState({}, '', '/app');
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (step !== 'otp' || resendCooldown <= 0) return undefined;
+    const timer = setInterval(() => {
+      setResendCooldown((seconds) => (seconds <= 1 ? 0 : seconds - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step, resendCooldown]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -148,6 +190,7 @@ export default function AuthPage() {
       const { phone: formatted } = await sendPhoneOtp(phone);
       setFormattedPhone(formatted);
       setStep('otp');
+      setResendCooldown(OTP_COOLDOWN_SECONDS);
       toast({
         title: 'OTP Sent',
         description: `Check SMS on ${formatPhone(phone).replace('+91', '+91 ')}`,
@@ -194,6 +237,35 @@ export default function AuthPage() {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || submitting) return;
+    const digits = (formattedPhone || phone).replace(/\D/g, '').slice(-10);
+    if (digits.length !== 10) {
+      setStep('phone');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { phone: formatted } = await sendPhoneOtp(digits);
+      setFormattedPhone(formatted);
+      setOtp('');
+      setResendCooldown(OTP_COOLDOWN_SECONDS);
+      toast({
+        title: 'OTP resent',
+        description: `New code sent to ${formatPhone(digits).replace('+91', '+91 ')}`,
+        className: 'bg-emerald-500 text-white',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not resend OTP',
+        description: error.message || 'Please try again.',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleGoogle = async () => {
     setSubmitting(true);
     try {
@@ -217,7 +289,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex flex-col items-center justify-center p-4 relative overflow-y-auto safe-top safe-bottom">
       <div className="absolute top-0 right-0 w-72 h-72 bg-teal-200/30 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#f0544f]/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
 
@@ -316,16 +388,29 @@ export default function AuthPage() {
                   {submitting ? <Spinner className="mr-2" /> : null}
                   Verify &amp; Continue
                 </Button>
-                <button
-                  type="button"
-                  className="w-full text-sm text-slate-500 hover:text-teal-700"
-                  onClick={() => {
-                    setStep('phone');
-                    setOtp('');
-                  }}
-                >
-                  Change number
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    className="w-full text-sm text-teal-700 hover:text-teal-800 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    onClick={handleResendOtp}
+                    disabled={submitting || resendCooldown > 0}
+                  >
+                    {resendCooldown > 0
+                      ? `Resend OTP in ${resendCooldown}s`
+                      : 'Resend OTP'}
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-sm text-slate-500 hover:text-teal-700"
+                    onClick={() => {
+                      setStep('phone');
+                      setOtp('');
+                      setResendCooldown(0);
+                    }}
+                  >
+                    Change number
+                  </button>
+                </div>
               </form>
             )}
 

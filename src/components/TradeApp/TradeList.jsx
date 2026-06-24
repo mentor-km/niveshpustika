@@ -265,7 +265,7 @@ export default function TradeList({ userId: overrideUserId }) {
       </Card>
 
       <Dialog open={Boolean(editingTrade)} onOpenChange={() => setEditingTrade(null)}>
-        <DialogContent className="bg-white border-teal-200/60 text-slate-800 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-teal-200/60 text-slate-800 max-h-[min(90dvh,100%)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-slate-800">Edit Trade</DialogTitle>
           </DialogHeader>

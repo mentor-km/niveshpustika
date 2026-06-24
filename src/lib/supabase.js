@@ -12,7 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 
 export const ADMIN_EMAIL =
-  import.meta.env.VITE_ADMIN_EMAIL || 'admin@niveshpustika.in';
+  import.meta.env.VITE_ADMIN_EMAIL || 'mentor@analystbychance.com';
 
 export const ADMIN_PHONE =
   import.meta.env.VITE_ADMIN_PHONE || '';

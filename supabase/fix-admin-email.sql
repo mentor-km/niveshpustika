@@ -1,9 +1,9 @@
--- Run this ONCE in Supabase SQL Editor.
--- Must match VITE_ADMIN_EMAIL and VITE_ADMIN_PHONE in Vercel / .env.local
-
--- ─── CONFIG (edit if your admin email or phone changes) ───────────────────
--- Admin email: contact@niveshpustika.in
--- Admin phone: +918109901136 (last 10 digits used for matching)
+-- Run in Supabase SQL Editor when admin email or phone changes.
+-- MUST match VITE_ADMIN_EMAIL and VITE_ADMIN_PHONE in Vercel / .env.local
+--
+-- Defaults (edit both lines below + env vars together):
+--   Email: mentor@analystbychance.com
+--   Phone: last 10 digits of VITE_ADMIN_PHONE (e.g. 8109901136 for +918109901136)
 
 create or replace function public.is_admin()
 returns boolean
@@ -19,7 +19,6 @@ as $$
     ) = '8109901136'
 $$;
 
--- Remove old admin rules (safe to re-run)
 drop policy if exists "Admin can view all profiles" on public.profiles;
 drop policy if exists "Admin can view all trades" on public.trades;
 

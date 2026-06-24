@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { CinematicLandingHero } from '@/components/Landing/CinematicLandingHero';
@@ -9,22 +9,21 @@ import { Spinner } from '@/components/ui/spinner';
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const standalone = isStandalone();
+  const [redirecting, setRedirecting] = useState(standalone);
 
   useEffect(() => {
-    if (!isStandalone() || loading) return;
+    if (!standalone || loading) return;
+    setRedirecting(true);
     navigate(user ? '/dashboard' : '/app', { replace: true });
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, standalone]);
 
-  if (isStandalone() && loading) {
+  if (standalone && (loading || redirecting)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex items-center justify-center safe-top safe-bottom">
         <Spinner className="w-8 h-8 text-[#2d8b8b]" />
       </div>
     );
-  }
-
-  if (isStandalone()) {
-    return null;
   }
 
   return (

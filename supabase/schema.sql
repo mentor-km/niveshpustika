@@ -1,5 +1,6 @@
 -- Run this in your Supabase SQL editor to set up the database.
--- Set VITE_ADMIN_EMAIL in .env.local to match the admin email below.
+-- Admin access: set VITE_ADMIN_EMAIL and VITE_ADMIN_PHONE in Vercel / .env.local
+-- to match the values in public.is_admin() below (email + last 10 digits of phone).
 
 -- Profiles (extends auth.users)
 create table if not exists public.profiles (
@@ -40,7 +41,7 @@ stable
 set search_path = public
 as $$
   select
-    lower(coalesce(auth.jwt() ->> 'email', '')) = 'contact@niveshpustika.in'
+    lower(coalesce(auth.jwt() ->> 'email', '')) = 'mentor@analystbychance.com'
     or right(
       regexp_replace(coalesce(auth.jwt() ->> 'phone', ''), '[^0-9]', '', 'g'),
       10
@@ -96,19 +97,37 @@ create policy "Admin can view all trades"
   on public.trades for select
   using (public.is_admin());
 
--- Auto-create profile on signup
+-- Auto-create profile on signup (email + phone-only accounts)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
+declare
+  display_name text;
 begin
-  insert into public.profiles (id, email, name)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data ->> 'name', split_part(new.email, '@', 1))
+  display_name := coalesce(
+    new.raw_user_meta_data ->> 'name',
+    new.raw_user_meta_data ->> 'full_name',
+    null
   );
+
+  if display_name is null and new.phone is not null then
+    display_name := new.phone;
+  end if;
+
+  if display_name is null and new.email is not null then
+    display_name := split_part(new.email, '@', 1);
+  end if;
+
+  if display_name is null then
+    display_name := 'User';
+  end if;
+
+  insert into public.profiles (id, email, name)
+  values (new.id, new.email, display_name)
+  on conflict (id) do nothing;
+
   return new;
 end;
 $$;

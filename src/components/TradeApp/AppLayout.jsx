@@ -81,11 +81,11 @@ export default function AppLayout({ children, showFab = true }) {
         </Button>
       </aside>
 
-      <div className="flex-1 md:ml-64 pb-20 md:pb-8">
+      <div className="flex-1 md:ml-64 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
         <main className="container mx-auto p-4 md:p-8">{children}</main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-md border-t border-teal-200/60 z-40 shadow-[0_-4px_20px_rgba(45,139,139,0.08)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-md border-t border-teal-200/60 z-40 shadow-[0_-4px_20px_rgba(45,139,139,0.08)] safe-bottom">
         <div className="flex items-center justify-around py-2">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -111,7 +111,7 @@ export default function AppLayout({ children, showFab = true }) {
               <Button
                 onClick={() => setShowTradeForm(true)}
                 aria-label="Add a new trade"
-                className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 w-14 h-14 rounded-full bg-[#2d8b8b] hover:bg-[#267a7a] shadow-lg shadow-teal-900/25"
+                className="fixed fab-bottom right-4 md:right-8 z-50 w-14 h-14 rounded-full bg-[#2d8b8b] hover:bg-[#267a7a] shadow-lg shadow-teal-900/25"
                 size="icon"
               >
                 <Plus className="w-6 h-6" />
@@ -128,7 +128,7 @@ export default function AppLayout({ children, showFab = true }) {
       )}
 
       <Dialog open={showTradeForm} onOpenChange={setShowTradeForm}>
-        <DialogContent className="bg-white border-teal-200/60 text-slate-800 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-teal-200/60 text-slate-800 max-h-[min(90dvh,100%)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-slate-800">Log New Trade</DialogTitle>
           </DialogHeader>

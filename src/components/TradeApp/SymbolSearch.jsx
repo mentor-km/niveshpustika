@@ -68,9 +68,18 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
     updateListPosition();
     window.addEventListener('scroll', updateListPosition, true);
     window.addEventListener('resize', updateListPosition);
+    const viewport = window.visualViewport;
+    if (viewport) {
+      viewport.addEventListener('resize', updateListPosition);
+      viewport.addEventListener('scroll', updateListPosition);
+    }
     return () => {
       window.removeEventListener('scroll', updateListPosition, true);
       window.removeEventListener('resize', updateListPosition);
+      if (viewport) {
+        viewport.removeEventListener('resize', updateListPosition);
+        viewport.removeEventListener('scroll', updateListPosition);
+      }
     };
   }, [showList, updateListPosition, results.length, isFetching]);
 
