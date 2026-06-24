@@ -116,11 +116,17 @@ export function computeMonthlySummary(trades = []) {
 }
 
 export function getBestWorstTrades(trades = [], count = 3) {
-  const sorted = [...trades].sort((a, b) => Number(b.pnl) - Number(a.pnl));
-  return {
-    best: sorted.slice(0, count),
-    worst: sorted.slice(-count).reverse(),
-  };
+  const best = [...trades]
+    .filter((t) => Number(t.pnl) > 0)
+    .sort((a, b) => Number(b.pnl) - Number(a.pnl))
+    .slice(0, count);
+
+  const worst = [...trades]
+    .filter((t) => Number(t.pnl) < 0)
+    .sort((a, b) => Number(a.pnl) - Number(b.pnl))
+    .slice(0, count);
+
+  return { best, worst };
 }
 
 export function getTrialInfo(profile) {

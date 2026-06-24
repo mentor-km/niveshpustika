@@ -331,7 +331,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {best.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No trades yet.</p>
+                <p className="text-slate-500 text-center py-8">
+                  {trades.length > 0 ? 'No winning trades yet.' : 'No trades yet.'}
+                </p>
               ) : (
                 best.map((t) => <TradeHighlight key={t.id} trade={t} type="best" />)
               )}
@@ -347,7 +349,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {worst.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No trades yet.</p>
+                <p className="text-slate-500 text-center py-8">
+                  {trades.length > 0 ? 'No losing trades yet.' : 'No trades yet.'}
+                </p>
               ) : (
                 worst.map((t) => <TradeHighlight key={t.id} trade={t} type="worst" />)
               )}
