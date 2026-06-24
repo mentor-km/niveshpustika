@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PenLine } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { searchInstruments, formatInstrumentLabel } from '@/lib/instruments';
 
@@ -15,10 +15,11 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
     setQuery(value || '');
   }, [value]);
 
+  const trimmedQuery = query.trim();
   const { data: results = [], isFetching } = useQuery({
-    queryKey: ['instruments', segment, query],
-    queryFn: () => searchInstruments(segment, query),
-    enabled: Boolean(segment) && query.trim().length >= 2,
+    queryKey: ['instruments', segment, trimmedQuery],
+    queryFn: () => searchInstruments(segment, trimmedQuery),
+    enabled: Boolean(segment) && trimmedQuery.length >= 2,
     staleTime: 60_000,
   });
 
@@ -32,13 +33,27 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const showList = open && segment && query.trim().length >= 2;
+  const showList = open && segment && trimmedQuery.length >= 2;
+  const exactMatch = results.some(
+    (inst) => inst.tradingsymbol.toUpperCase() === trimmedQuery.toUpperCase()
+  );
+  const showManualEntry =
+    trimmedQuery.length >= 1 && !exactMatch && (!isFetching || results.length === 0);
+
+  const acceptManualSymbol = () => {
+    const symbol = trimmedQuery.toUpperCase();
+    setQuery(symbol);
+    onChange(symbol);
+    setOpen(false);
+  };
 
   return (
     <div ref={wrapRef} className="relative">
       <Input
         placeholder={
-          segment ? 'Start typing symbol, e.g. RELIANCE, NIFTY…' : 'Select segment first'
+          segment
+            ? 'Symbol — e.g. RELIANCE, NIFTY, GOLD CE (manual entry OK)'
+            : 'Select segment first'
         }
         className={`${inputClass} uppercase`}
         value={query}
@@ -50,6 +65,15 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            acceptManualSymbol();
+          }
+          if (e.key === 'Escape') {
+            setOpen(false);
+          }
+        }}
         autoComplete="off"
       />
       {showList && (
@@ -60,8 +84,8 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
             </li>
           )}
           {!isFetching && results.length === 0 && (
-            <li className="px-3 py-2 text-sm text-slate-500">
-              No matches — keep typing to use a custom symbol
+            <li className="px-3 py-2 text-sm text-slate-500 border-b border-teal-50">
+              No suggestions — you can still log this trade with your symbol below.
             </li>
           )}
           {results.map((inst) => (
@@ -84,6 +108,26 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
               </button>
             </li>
           ))}
+          {showManualEntry && (
+            <li>
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2.5 hover:bg-teal-50 bg-teal-50/50 flex items-start gap-2"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={acceptManualSymbol}
+              >
+                <PenLine className="h-4 w-4 text-[#2d8b8b] mt-0.5 shrink-0" />
+                <span>
+                  <span className="block font-medium text-slate-800 text-sm">
+                    Use &ldquo;{trimmedQuery.toUpperCase()}&rdquo;
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    Log trade with this symbol — lot size can be entered manually
+                  </span>
+                </span>
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </div>
