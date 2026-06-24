@@ -170,7 +170,7 @@ export function CinematicLandingHero() {
   return (
     <div
       ref={containerRef}
-      className="relative h-dvh max-h-dvh w-full overflow-hidden flex flex-col bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] text-slate-800 font-sans antialiased"
+      className="relative min-h-dvh w-full overflow-x-hidden overflow-y-auto md:h-dvh md:max-h-dvh md:overflow-hidden flex flex-col bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] text-slate-800 font-sans antialiased"
       style={{ perspective: '1200px' }}
     >
       <style dangerouslySetInnerHTML={{ __html: INJECTED_STYLES }} />
@@ -190,20 +190,20 @@ export function CinematicLandingHero() {
         </Link>
       </header>
 
-      <main className="relative z-20 flex-1 min-h-0 px-4 sm:px-6 lg:px-10 pb-2">
+      <main className="relative z-20 flex-1 min-h-0 px-4 sm:px-6 lg:px-10 pb-3 md:pb-2">
         <div
           ref={cardRef}
           className={cn(
             'landing-surface-card',
-            'h-full max-h-full rounded-2xl sm:rounded-3xl overflow-hidden',
+            'md:h-full md:max-h-full rounded-2xl sm:rounded-3xl overflow-hidden',
             'flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-8',
             'px-4 py-5 sm:px-8 sm:py-6 lg:px-12 lg:py-8'
           )}
         >
           <div className="landing-card-sheen" aria-hidden="true" />
 
-          <div className="relative z-10 flex flex-col items-center lg:items-start text-center lg:text-left lg:flex-1 lg:max-w-md w-full">
-            <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-4 sm:mb-5">
+          <div className="relative z-10 flex flex-col items-center lg:items-start text-center lg:text-left lg:flex-1 lg:max-w-md w-full shrink-0">
+            <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-3 sm:mb-5">
               <span className="rounded-full bg-teal-100 border border-teal-200 px-3 py-1 text-xs font-semibold text-teal-800">
                 Free to use
               </span>
@@ -213,7 +213,7 @@ export function CinematicLandingHero() {
             </div>
 
             <h1
-              className="font-heading text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight leading-[1.15] flex flex-wrap justify-center lg:justify-start gap-x-3 gap-y-1"
+              className="font-heading text-[1.75rem] leading-tight sm:text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold tracking-tight sm:leading-[1.15] flex flex-wrap justify-center lg:justify-start gap-x-2 sm:gap-x-3 gap-y-1"
               aria-label="Track what you Trade"
             >
               {HEADLINE_WORDS.map((word) => (
@@ -229,29 +229,56 @@ export function CinematicLandingHero() {
               ))}
             </h1>
 
-            <p className="mt-4 sm:mt-5 text-sm sm:text-base text-slate-600 leading-relaxed max-w-sm">
+            <p className="mt-3 sm:mt-5 text-sm sm:text-base text-slate-600 leading-relaxed max-w-sm">
               Built by a trader, for Indian traders. Log Equity, Futures, Options, Currency &amp; MCX —
               track P&amp;L in ₹ on web or mobile web app.
             </p>
 
-            <p className="mt-3 text-xs sm:text-sm font-medium text-teal-700">
+            <p className="mt-2 sm:mt-3 text-xs sm:text-sm font-medium text-teal-700">
               Standard plan · Full access · No payment required
             </p>
 
             <Button
               asChild
               size="lg"
-              className="landing-cta-btn mt-6 sm:mt-8 h-12 sm:h-14 px-8 sm:px-10 text-base sm:text-lg font-bold rounded-2xl border-0"
+              className="landing-cta-btn mt-5 sm:mt-8 h-12 sm:h-14 px-8 sm:px-10 text-base sm:text-lg font-bold rounded-2xl border-0 w-full sm:w-auto"
             >
               <Link to="/app">
                 Start here
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
+
+            {/* Compact preview on mobile — full phone mockup is desktop/tablet only */}
+            <div className="md:hidden w-full max-w-xs mx-auto mt-5 rounded-2xl bg-slate-900 p-4 shadow-lg shadow-teal-900/20 border border-slate-700/50">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <p className="text-[10px] text-neutral-400 uppercase tracking-widest font-bold">Dashboard</p>
+                  <p className="text-sm font-bold text-white">Nivesh Pustika</p>
+                </div>
+                <img src="/logo.png" alt="" className="h-7 w-7 rounded-lg object-cover" aria-hidden="true" />
+              </div>
+              <div className="landing-widget-depth rounded-xl p-3 mb-3">
+                <p className="text-[10px] text-neutral-400">Net P&amp;L</p>
+                <p className="text-xl font-bold text-teal-300 flex items-center gap-1">
+                  <IndianRupee className="w-4 h-4" aria-hidden="true" />
+                  42,850
+                </p>
+              </div>
+              <div className="h-14 rounded-lg bg-black/30 border border-white/5 flex items-end px-1.5 pb-1.5 gap-0.5">
+                {CHART_BARS.slice(0, 6).map((bar, i) => (
+                  <div
+                    key={i}
+                    className={cn('flex-1 rounded-t', bar.tone === 'teal' ? 'landing-bar-teal' : 'landing-bar-coral')}
+                    style={{ height: `${bar.h}%` }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
           <div
-            className="relative z-10 flex items-center justify-center w-full lg:flex-1 min-h-0"
+            className="relative z-10 hidden md:flex items-center justify-center w-full lg:flex-1 min-h-0"
             style={{ perspective: '1000px' }}
           >
             <div className="relative flex items-center justify-center scale-[0.72] sm:scale-[0.82] md:scale-90 lg:scale-100">
@@ -347,12 +374,12 @@ export function CinematicLandingHero() {
         </div>
       </main>
 
-      <footer className="relative z-30 shrink-0 px-4 sm:px-6 lg:px-10 py-3 sm:py-4 border-t border-teal-200/60 bg-white/40 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center justify-center sm:justify-between gap-x-5 gap-y-2 text-xs sm:text-sm text-slate-500">
+      <footer className="relative z-30 shrink-0 px-4 sm:px-6 lg:px-10 py-2.5 sm:py-4 border-t border-teal-200/60 bg-white/40 backdrop-blur-sm">
+        <div className="flex flex-wrap items-center justify-center sm:justify-between gap-x-4 gap-y-1.5 text-[11px] sm:text-sm text-slate-500">
           <p className="order-2 sm:order-1 w-full sm:w-auto text-center sm:text-left">
             © {new Date().getFullYear()} Nivesh Pustika
           </p>
-          <nav className="order-1 sm:order-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-1" aria-label="Footer">
+          <nav className="order-1 sm:order-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1" aria-label="Footer">
             <Link to="/privacy" className="hover:text-teal-700 transition-colors">
               Privacy
             </Link>
@@ -362,7 +389,6 @@ export function CinematicLandingHero() {
             <Link to="/app" className="hover:text-teal-700 transition-colors font-medium text-teal-700">
               Login
             </Link>
-            <span className="text-slate-600">Made in India 🇮🇳</span>
           </nav>
         </div>
       </footer>
