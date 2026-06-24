@@ -3,6 +3,9 @@ import { supabase } from '@/lib/supabase';
 const SELECT_FIELDS =
   'tradingsymbol, name, lot_size, expiry, exchange, instrument_type, strike';
 
+const DERIVATIVE_FETCH_LIMIT = 150;
+const DERIVATIVE_RESULT_LIMIT = 50;
+
 const TYPE_ALIASES = {
   CE: 'CE',
   PE: 'PE',
@@ -14,6 +17,103 @@ const TYPE_ALIASES = {
   FUTURE: 'FUT',
   FUTURES: 'FUT',
 };
+
+/** Kite CSV reports lot_size=1 for many MCX/CDS contracts; map to traded units per lot. */
+export function resolveEffectiveLotSize(inst) {
+  if (!inst) return null;
+
+  const raw = Number(inst.lot_size);
+  if (Number.isFinite(raw) && raw > 1) return raw;
+
+  const sym = (inst.tradingsymbol || '').toUpperCase();
+  const ex = (inst.exchange || '').toUpperCase();
+
+  if (ex === 'CDS') {
+    if (sym.startsWith('JPYINR')) return 100000;
+    if (/^(USDINR|EURINR|GBPINR|CHFINR)/.test(sym)) return 1000;
+  }
+
+  if (ex === 'MCX') {
+    if (sym.startsWith('GOLDM')) return 100;
+    if (sym.startsWith('GOLDPETAL')) return 1;
+    if (sym.startsWith('GOLDGUINEA')) return 8;
+    if (sym.startsWith('GOLDTEN')) return 10;
+    if (sym.startsWith('GOLD')) return 1000;
+    if (sym.startsWith('CRUDEOILM')) return 10;
+    if (sym.startsWith('CRUDEOIL')) return 100;
+    if (sym.startsWith('SILVERM')) return 5;
+    if (sym.startsWith('SILVER')) return 30;
+    if (sym.startsWith('NATURALGAS')) return 1250;
+    if (sym.startsWith('COPPER')) return 2500;
+    if (sym.startsWith('ZINC')) return 5000;
+    if (sym.startsWith('LEAD')) return 5000;
+    if (sym.startsWith('ALUMINIUM') || sym.startsWith('ALUMINUM')) return 5000;
+  }
+
+  return Number.isFinite(raw) ? raw : null;
+}
+
+function enrichInstrument(inst) {
+  const lot_size = resolveEffectiveLotSize(inst);
+  if (lot_size == null || lot_size === inst.lot_size) return inst;
+  return { ...inst, lot_size };
+}
+
+function enrichInstruments(rows) {
+  return (rows ?? []).map(enrichInstrument);
+}
+
+function sortByExpiryThenSymbol(a, b) {
+  const expA = a.expiry || '9999-12-31';
+  const expB = b.expiry || '9999-12-31';
+  if (expA !== expB) return expA.localeCompare(expB);
+
+  const strikeA = a.strike ?? 0;
+  const strikeB = b.strike ?? 0;
+  if (strikeA !== strikeB) return strikeA - strikeB;
+
+  return a.tradingsymbol.localeCompare(b.tradingsymbol);
+}
+
+/** Surface nearest expiries first instead of one month filling the whole list. */
+export function spreadByExpiry(rows, limit = DERIVATIVE_RESULT_LIMIT) {
+  const sorted = [...rows].sort(sortByExpiryThenSymbol);
+  const buckets = new Map();
+
+  for (const row of sorted) {
+    const key = row.expiry || 'unknown';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(row);
+  }
+
+  const expiryOrder = [...buckets.keys()].sort();
+  const out = [];
+  let round = 0;
+
+  while (out.length < limit) {
+    let added = false;
+    for (const exp of expiryOrder) {
+      const bucket = buckets.get(exp);
+      if (round < bucket.length) {
+        out.push(bucket[round]);
+        added = true;
+        if (out.length >= limit) break;
+      }
+    }
+    if (!added) break;
+    round += 1;
+  }
+
+  return out;
+}
+
+function finalizeDerivativeResults(rows, { spreadOptions = false } = {}) {
+  const sorted = [...rows].sort(sortByExpiryThenSymbol);
+  const limited = spreadOptions
+    ? spreadByExpiry(sorted, DERIVATIVE_RESULT_LIMIT)
+    : sorted.slice(0, DERIVATIVE_RESULT_LIMIT);
+  return enrichInstruments(limited);
+}
 
 /** Parse queries like "Gold CE", "Nifty FUT", "USDINR PE". */
 export function parseInstrumentQuery(raw) {
@@ -52,7 +152,6 @@ function applySymbolFilter(builder, segment, parsed) {
   const term = underlying || compact;
   if (!term) return builder;
 
-  // Single token: prefix match (NIFTY → NIFTY26JUNFUT, not BANKNIFTY).
   return builder.ilike('tradingsymbol', `${term}%`);
 }
 
@@ -142,11 +241,12 @@ export async function searchInstruments(segment, query) {
   const today = new Date().toISOString().slice(0, 10);
   const parsed = parseInstrumentQuery(q);
 
-  function buildQuery({ instrumentTypes, limit = 25 }) {
+  function buildQuery({ instrumentTypes, limit = DERIVATIVE_FETCH_LIMIT }) {
     let builder = supabase
       .from('instruments')
       .select(SELECT_FIELDS)
       .eq('app_segment', segment)
+      .order('expiry', { ascending: true, nullsFirst: false })
       .order('tradingsymbol', { ascending: true })
       .limit(limit);
 
@@ -166,6 +266,12 @@ export async function searchInstruments(segment, query) {
   }
 
   const explicitTypes = resolveInstrumentTypes(segment, parsed.instrumentType);
+  const isOptionLike =
+    segment === 'Options' ||
+    parsed.instrumentType === 'CE' ||
+    parsed.instrumentType === 'PE' ||
+    (segment === 'Commodities' &&
+      (parsed.instrumentType === 'CE' || parsed.instrumentType === 'PE'));
 
   try {
     if (segment === 'Equity') {
@@ -175,32 +281,29 @@ export async function searchInstruments(segment, query) {
     if (segment === 'Commodities' && !parsed.instrumentType) {
       const { data: futures, error: futErr } = await buildQuery({ instrumentTypes: ['FUT'] });
       if (futErr) throw futErr;
-      const futList = futures ?? [];
-      if (futList.length >= 25) return futList;
+      const futList = finalizeDerivativeResults(futures ?? [], { spreadOptions: false });
 
-      const { data: options, error: optErr } = await buildQuery({
-        instrumentTypes: ['CE', 'PE'],
-        limit: 25 - futList.length,
-      });
+      const { data: options, error: optErr } = await buildQuery({ instrumentTypes: ['CE', 'PE'] });
       if (optErr) throw optErr;
-      return [...futList, ...(options ?? [])];
+      const optList = finalizeDerivativeResults(options ?? [], { spreadOptions: true });
+
+      const seen = new Set(futList.map((r) => `${r.exchange}-${r.tradingsymbol}`));
+      const merged = [
+        ...futList,
+        ...optList.filter((r) => !seen.has(`${r.exchange}-${r.tradingsymbol}`)),
+      ];
+      return merged.slice(0, DERIVATIVE_RESULT_LIMIT);
     }
 
-    if (explicitTypes?.length === 1) {
+    if (explicitTypes?.length >= 1) {
       const { data, error } = await buildQuery({ instrumentTypes: explicitTypes });
       if (error) throw error;
-      return data ?? [];
-    }
-
-    if (explicitTypes?.length > 1) {
-      const { data, error } = await buildQuery({ instrumentTypes: explicitTypes });
-      if (error) throw error;
-      return data ?? [];
+      return finalizeDerivativeResults(data ?? [], { spreadOptions: isOptionLike });
     }
 
     const { data, error } = await buildQuery({});
     if (error) throw error;
-    return data ?? [];
+    return finalizeDerivativeResults(data ?? [], { spreadOptions: false });
   } catch (error) {
     if (error.code === '42P01') {
       return [];
@@ -211,6 +314,7 @@ export async function searchInstruments(segment, query) {
 
 export function formatInstrumentLabel(inst) {
   if (!inst) return '';
+  const lotSize = resolveEffectiveLotSize(inst);
   const parts = [inst.tradingsymbol];
   if (inst.name && inst.name !== inst.tradingsymbol) {
     parts.push(inst.name);
@@ -221,8 +325,8 @@ export function formatInstrumentLabel(inst) {
   if (inst.strike) {
     parts.push(String(inst.strike));
   }
-  if (inst.lot_size && inst.instrument_type !== 'EQ') {
-    parts.push(`lot ${inst.lot_size}`);
+  if (lotSize && inst.instrument_type !== 'EQ') {
+    parts.push(`lot ${lotSize}`);
   }
   return parts.join(' · ');
 }

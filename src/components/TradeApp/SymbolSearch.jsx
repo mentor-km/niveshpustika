@@ -77,7 +77,7 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
         autoComplete="off"
       />
       {showList && (
-        <ul className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-md border border-teal-200 bg-white shadow-lg">
+        <ul className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-md border border-teal-200 bg-white shadow-lg">
           {isFetching && (
             <li className="flex justify-center py-4">
               <Loader2 className="h-5 w-5 animate-spin text-[#2d8b8b]" />

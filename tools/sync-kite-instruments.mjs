@@ -10,6 +10,7 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 
 const KITE_INSTRUMENTS_URL = 'https://api.kite.trade/instruments';
 const BATCH_SIZE = 500;
@@ -188,6 +189,39 @@ function parseExpiry(value) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 
+/** Kite CSV uses lot_size=1 for many MCX/CDS rows; store exchange contract size instead. */
+function resolveLotSize(row) {
+  const raw = parseInt(row.lot_size, 10);
+  if (!Number.isNaN(raw) && raw > 1) return raw;
+
+  const sym = (row.tradingsymbol || '').toUpperCase();
+  const ex = (row.exchange || '').toUpperCase();
+
+  if (ex === 'CDS') {
+    if (sym.startsWith('JPYINR')) return 100000;
+    if (/^(USDINR|EURINR|GBPINR|CHFINR)/.test(sym)) return 1000;
+  }
+
+  if (ex === 'MCX') {
+    if (sym.startsWith('GOLDM')) return 100;
+    if (sym.startsWith('GOLDPETAL')) return 1;
+    if (sym.startsWith('GOLDGUINEA')) return 8;
+    if (sym.startsWith('GOLDTEN')) return 10;
+    if (sym.startsWith('GOLD')) return 1000;
+    if (sym.startsWith('CRUDEOILM')) return 10;
+    if (sym.startsWith('CRUDEOIL')) return 100;
+    if (sym.startsWith('SILVERM')) return 5;
+    if (sym.startsWith('SILVER')) return 30;
+    if (sym.startsWith('NATURALGAS')) return 1250;
+    if (sym.startsWith('COPPER')) return 2500;
+    if (sym.startsWith('ZINC')) return 5000;
+    if (sym.startsWith('LEAD')) return 5000;
+    if (sym.startsWith('ALUMINIUM') || sym.startsWith('ALUMINUM')) return 5000;
+  }
+
+  return Number.isNaN(raw) ? null : raw;
+}
+
 function rowToRecord(headers, line) {
   const cols = parseCsvLine(line);
   const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] ?? '']));
@@ -195,7 +229,7 @@ function rowToRecord(headers, line) {
   const app_segment = toAppSegment(row);
   if (!app_segment || !APP_SEGMENTS.includes(app_segment)) return null;
 
-  const lotSize = parseInt(row.lot_size, 10);
+  const lotSize = resolveLotSize(row);
   const strike = row.strike ? parseFloat(row.strike) : null;
 
   return {
@@ -206,7 +240,7 @@ function rowToRecord(headers, line) {
     instrument_type: row.instrument_type,
     expiry: parseExpiry(row.expiry),
     strike: strike && !Number.isNaN(strike) ? strike : null,
-    lot_size: Number.isNaN(lotSize) ? null : lotSize,
+    lot_size: lotSize == null || Number.isNaN(lotSize) ? null : lotSize,
     tick_size: row.tick_size ? parseFloat(row.tick_size) : null,
     synced_at: new Date().toISOString(),
   };
@@ -243,7 +277,10 @@ async function upsertBatch(supabase, batch) {
 
 async function main() {
   const { url, serviceKey } = resolveSupabaseConfig();
-  const supabase = createClient(url, serviceKey);
+  const supabase = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { transport: ws },
+  });
 
   console.log('Checking Supabase connection…');
   await verifySupabaseConnection(supabase, url, serviceKey);
