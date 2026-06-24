@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabase';
 
+const SELECT_FIELDS =
+  'tradingsymbol, name, lot_size, expiry, exchange, instrument_type, strike';
+
 /**
  * Search instrument master for autocomplete (requires instruments table + daily sync).
  */
@@ -10,30 +13,71 @@ export async function searchInstruments(segment, query) {
   const today = new Date().toISOString().slice(0, 10);
   const escaped = q.replace(/[%_\\]/g, '');
 
-  let builder = supabase
-    .from('instruments')
-    .select('tradingsymbol, name, lot_size, expiry, exchange, instrument_type, strike')
-    .eq('app_segment', segment)
-    .or(`tradingsymbol.ilike.${escaped}%,name.ilike.%${escaped}%`)
-    .order('tradingsymbol', { ascending: true })
-    .limit(25);
+  function buildQuery({ instrumentTypes, limit = 25 }) {
+    let builder = supabase
+      .from('instruments')
+      .select(SELECT_FIELDS)
+      .eq('app_segment', segment)
+      .order('tradingsymbol', { ascending: true })
+      .limit(limit);
 
-  if (segment === 'Futures') {
-    builder = builder.eq('instrument_type', 'FUT').gte('expiry', today);
-  } else if (segment === 'Options') {
-    builder = builder.in('instrument_type', ['CE', 'PE']).gte('expiry', today);
-  } else if (segment === 'Currency' || segment === 'Commodities') {
-    builder = builder.gte('expiry', today);
+    if (segment === 'Equity') {
+      builder = builder.or(`tradingsymbol.ilike.${escaped}%,name.ilike.%${escaped}%`);
+    } else {
+      // Derivatives: match symbol prefix only (avoids BANKNIFTY when typing NIFTY).
+      builder = builder.ilike('tradingsymbol', `${escaped}%`);
+    }
+
+    if (instrumentTypes?.length === 1) {
+      builder = builder.eq('instrument_type', instrumentTypes[0]);
+    } else if (instrumentTypes?.length > 1) {
+      builder = builder.in('instrument_type', instrumentTypes);
+    }
+
+    if (segment !== 'Equity') {
+      builder = builder.gte('expiry', today);
+    }
+
+    return builder;
   }
 
-  const { data, error } = await builder;
-  if (error) {
+  try {
+    if (segment === 'Futures' || segment === 'Currency') {
+      const { data, error } = await buildQuery({ instrumentTypes: ['FUT'] });
+      if (error) throw error;
+      return data ?? [];
+    }
+
+    if (segment === 'Options') {
+      const { data, error } = await buildQuery({ instrumentTypes: ['CE', 'PE'] });
+      if (error) throw error;
+      return data ?? [];
+    }
+
+    if (segment === 'Commodities') {
+      // Futures first — option strikes sort before GOLD26AUGFUT alphabetically.
+      const { data: futures, error: futErr } = await buildQuery({ instrumentTypes: ['FUT'] });
+      if (futErr) throw futErr;
+      const futList = futures ?? [];
+      if (futList.length >= 25) return futList;
+
+      const { data: options, error: optErr } = await buildQuery({
+        instrumentTypes: ['CE', 'PE'],
+        limit: 25 - futList.length,
+      });
+      if (optErr) throw optErr;
+      return [...futList, ...(options ?? [])];
+    }
+
+    const { data, error } = await buildQuery({});
+    if (error) throw error;
+    return data ?? [];
+  } catch (error) {
     if (error.code === '42P01') {
       return [];
     }
     throw error;
   }
-  return data ?? [];
 }
 
 export function formatInstrumentLabel(inst) {
