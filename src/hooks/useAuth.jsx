@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { supabase, isAdminUser, updateLastActive } from '@/lib/supabase';
+import { supabase, isAdminUser, updateLastActive, ensureProfile } from '@/lib/supabase';
 
 const AuthContext = createContext(null);
 
@@ -23,7 +23,9 @@ export function AuthProvider({ children }) {
       setLoading(false);
 
       if (nextSession?.user?.id) {
-        updateLastActive(nextSession.user.id).catch(() => {});
+        ensureProfile(nextSession.user)
+          .then(() => updateLastActive(nextSession.user.id))
+          .catch(() => {});
       }
     });
 

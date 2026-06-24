@@ -130,6 +130,37 @@ export async function updateLastActive(userId) {
   if (error) throw error;
 }
 
+/** Create profile row if missing (common for phone OTP sign-ups). */
+export async function ensureProfile(user) {
+  if (!user?.id) return null;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (existing) return existing;
+
+  const name =
+    user.user_metadata?.name ||
+    user.user_metadata?.full_name ||
+    (user.phone ? displayPhone(user) : null) ||
+    (user.email ? user.email.split('@')[0] : 'User');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert({
+      id: user.id,
+      email: user.email || null,
+      name,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // ─── Profile ────────────────────────────────────────────────────────────────
 
 export async function fetchProfile(userId) {
@@ -137,9 +168,19 @@ export async function fetchProfile(userId) {
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
   if (error) throw error;
-  return data;
+  if (data) return data;
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!user || user.id !== userId) {
+    throw new Error('Profile not found');
+  }
+  return ensureProfile(user);
 }
 
 export async function updateProfile(userId, { name }) {
@@ -194,38 +235,102 @@ export async function deleteTrade(id) {
 // ─── Admin ──────────────────────────────────────────────────────────────────
 
 export async function fetchAdminStats() {
-  const [usersResult, tradesResult] = await Promise.all([
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const [usersCount, tradesCount, profilesResult, tradesData] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }),
     supabase.from('trades').select('*', { count: 'exact', head: true }),
+    supabase.from('profiles').select('last_active, created_at'),
+    supabase.from('trades').select('pnl'),
   ]);
 
-  if (usersResult.error) throw usersResult.error;
-  if (tradesResult.error) throw tradesResult.error;
+  if (usersCount.error) throw usersCount.error;
+  if (tradesCount.error) throw tradesCount.error;
+  if (profilesResult.error) throw profilesResult.error;
+  if (tradesData.error) throw tradesData.error;
+
+  const profiles = profilesResult.data ?? [];
+  const activeUsers = profiles.filter(
+    (p) => p.last_active && new Date(p.last_active).getTime() > weekAgo
+  ).length;
+  const newUsers = profiles.filter(
+    (p) => p.created_at && new Date(p.created_at).getTime() > weekAgo
+  ).length;
+  const totalPnl = (tradesData.data ?? []).reduce((sum, t) => sum + Number(t.pnl || 0), 0);
 
   return {
-    totalUsers: usersResult.count ?? 0,
-    totalTrades: tradesResult.count ?? 0,
+    totalUsers: usersCount.count ?? 0,
+    totalTrades: tradesCount.count ?? 0,
+    activeUsers,
+    newUsers,
+    totalPnl,
   };
+}
+
+function aggregateTradesByUser(trades) {
+  return (trades ?? []).reduce((acc, trade) => {
+    const id = trade.user_id;
+    if (!acc[id]) {
+      acc[id] = { count: 0, totalPnl: 0, wins: 0, lastTrade: null };
+    }
+    acc[id].count += 1;
+    acc[id].totalPnl += Number(trade.pnl || 0);
+    if (Number(trade.pnl) > 0) acc[id].wins += 1;
+    const tradeDate = trade.entry_time || trade.created_at;
+    if (tradeDate && (!acc[id].lastTrade || tradeDate > acc[id].lastTrade)) {
+      acc[id].lastTrade = tradeDate;
+    }
+    return acc;
+  }, {});
 }
 
 export async function fetchAllUsers() {
   const [profilesResult, tradesResult] = await Promise.all([
     supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-    supabase.from('trades').select('user_id'),
+    supabase.from('trades').select('user_id, pnl, entry_time, created_at'),
   ]);
 
   if (profilesResult.error) throw profilesResult.error;
   if (tradesResult.error) throw tradesResult.error;
 
-  const tradeCountByUser = (tradesResult.data ?? []).reduce((acc, trade) => {
-    acc[trade.user_id] = (acc[trade.user_id] || 0) + 1;
-    return acc;
-  }, {});
+  const byUser = aggregateTradesByUser(tradesResult.data);
 
-  return (profilesResult.data ?? []).map((profile) => ({
-    ...profile,
-    trades: [{ count: tradeCountByUser[profile.id] ?? 0 }],
-  }));
+  return (profilesResult.data ?? []).map((profile) => {
+    const stats = byUser[profile.id] ?? { count: 0, totalPnl: 0, wins: 0, lastTrade: null };
+    const winRate = stats.count > 0 ? (stats.wins / stats.count) * 100 : 0;
+    return {
+      ...profile,
+      tradeCount: stats.count,
+      totalPnl: stats.totalPnl,
+      winRate,
+      lastTrade: stats.lastTrade,
+      trades: [{ count: stats.count }],
+    };
+  });
+}
+
+export async function fetchUserAdminSummary(userId) {
+  const [profileResult, tradesResult] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('trades').select('pnl, entry_time').eq('user_id', userId),
+  ]);
+
+  if (profileResult.error) throw profileResult.error;
+  if (tradesResult.error) throw tradesResult.error;
+
+  const trades = tradesResult.data ?? [];
+  const totalPnl = trades.reduce((sum, t) => sum + Number(t.pnl || 0), 0);
+  const wins = trades.filter((t) => Number(t.pnl) > 0).length;
+  const losses = trades.filter((t) => Number(t.pnl) < 0).length;
+
+  return {
+    profile: profileResult.data,
+    tradeCount: trades.length,
+    totalPnl,
+    winRate: trades.length > 0 ? (wins / trades.length) * 100 : 0,
+    wins,
+    losses,
+  };
 }
 
 export async function fetchTradesByUserId(userId) {

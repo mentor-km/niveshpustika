@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { User, Phone, Calendar, Shield, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { User, Phone, Calendar, Shield, LogOut, Settings } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import AppLayout from '@/components/TradeApp/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ const profileSchema = z.object({
 });
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -124,6 +124,14 @@ export default function ProfilePage() {
               <Calendar className="w-4 h-4" />
               Member since {format(new Date(profile.created_at), 'dd MMM yyyy')}
             </div>
+            {isAdmin && (
+              <Button asChild variant="outline" className="w-full border-teal-200 text-[#2d8b8b] hover:bg-teal-50">
+                <Link to="/admin">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Open Admin Panel
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
 

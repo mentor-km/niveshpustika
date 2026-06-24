@@ -8,8 +8,8 @@ export default function AdminRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <Spinner className="w-8 h-8 text-red-500" />
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex items-center justify-center">
+        <Spinner className="w-8 h-8 text-[#2d8b8b]" />
       </div>
     );
   }
