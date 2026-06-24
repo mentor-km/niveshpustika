@@ -34,6 +34,7 @@ import {
   dateInputToIso,
   isoToDateInput,
 } from '@/lib/supabase';
+import SymbolSearch from '@/components/TradeApp/SymbolSearch';
 
 const tradeSchema = z
   .object({
@@ -204,6 +205,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
               <Select
                 onValueChange={(val) => {
                   field.onChange(val);
+                  form.setValue('symbol', '');
                   form.setValue('quantity', '');
                   form.setValue('lot_size', '');
                   form.setValue('lots', '');
@@ -235,10 +237,15 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             <FormItem>
               <FormLabel className={labelClass}>Symbol</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="e.g. RELIANCE, NIFTY, GOLD"
-                  className={`${inputClass} uppercase`}
-                  {...field}
+                <SymbolSearch
+                  segment={watched.segment}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onSelectInstrument={(inst) => {
+                    if (!isEquitySegment(watched.segment) && inst.lot_size) {
+                      form.setValue('lot_size', inst.lot_size);
+                    }
+                  }}
                 />
               </FormControl>
               <FormMessage />

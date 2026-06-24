@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host :: --port 3000",
     "build": "node tools/generate-llms.js || true && vite build",
+    "sync-instruments": "node tools/sync-kite-instruments.mjs",
     "preview": "vite preview --host :: --port 3000",
     "lint": "eslint . --quiet"
   },
