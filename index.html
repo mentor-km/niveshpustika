@@ -30,6 +30,35 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        var reloadKey = 'np-sw-reload';
+        function recoverFromStaleCache() {
+          if (sessionStorage.getItem(reloadKey)) return;
+          sessionStorage.setItem(reloadKey, '1');
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(regs.map(function (r) { return r.unregister(); }));
+            }).finally(function () { window.location.reload(); });
+          } else {
+            window.location.reload();
+          }
+        }
+        window.addEventListener('vite:preloadError', function (e) {
+          e.preventDefault();
+          recoverFromStaleCache();
+        });
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t.tagName === 'SCRIPT' && t.src && t.src.indexOf('/assets/') !== -1) {
+            recoverFromStaleCache();
+          }
+        }, true);
+        window.addEventListener('load', function () {
+          sessionStorage.removeItem(reloadKey);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

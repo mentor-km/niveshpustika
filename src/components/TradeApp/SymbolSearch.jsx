@@ -103,12 +103,18 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
     setOpen(false);
   };
 
+  const stopScrollPropagation = (e) => {
+    e.stopPropagation();
+  };
+
   const dropdown = showList && listStyle && (
     <ul
       ref={listRef}
       data-symbol-search-dropdown
-      style={listStyle}
-      className="max-h-72 overflow-y-auto rounded-md border border-teal-200 bg-white shadow-lg"
+      style={{ ...listStyle, overscrollBehavior: 'contain', touchAction: 'pan-y' }}
+      className="max-h-72 overflow-y-auto rounded-md border border-teal-200 bg-white shadow-lg pointer-events-auto"
+      onWheel={stopScrollPropagation}
+      onTouchMove={stopScrollPropagation}
     >
       {isFetching && (
         <li className="flex justify-center py-4">

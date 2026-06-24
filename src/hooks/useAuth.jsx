@@ -21,27 +21,32 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
 
-    const applySession = async (nextSession) => {
+    const applySession = (nextSession) => {
       if (!mounted) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
-      await bootstrapSessionUser(nextSession);
+      void bootstrapSessionUser(nextSession);
     };
 
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      await applySession(currentSession);
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      applySession(currentSession);
       if (mounted) setLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      await applySession(nextSession);
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      applySession(nextSession);
       if (mounted) setLoading(false);
     });
 
+    const loadingTimeout = window.setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 10_000);
+
     return () => {
       mounted = false;
+      window.clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
