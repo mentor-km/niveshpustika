@@ -9,8 +9,6 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { createClient } from '@supabase/supabase-js';
-import ws from 'ws';
 
 const KITE_INSTRUMENTS_URL = 'https://api.kite.trade/instruments';
 const BATCH_SIZE = 500;
@@ -107,12 +105,32 @@ function resolveSupabaseConfig() {
     process.exit(1);
   }
 
-  return { url, serviceKey };
+  return { url: url.replace(/\/$/, ''), serviceKey };
 }
 
-async function verifySupabaseConnection(supabase, url, serviceKey) {
-  const { error } = await supabase.from('instruments').select('id').limit(1);
-  if (error?.message?.includes('Invalid API key')) {
+function supabaseRestHeaders(serviceKey, extra = {}) {
+  return {
+    apikey: serviceKey,
+    Authorization: `Bearer ${serviceKey}`,
+    ...extra,
+  };
+}
+
+async function readSupabaseError(res) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
+async function verifySupabaseConnection(url, serviceKey) {
+  const res = await fetch(`${url}/rest/v1/instruments?select=id&limit=1`, {
+    headers: supabaseRestHeaders(serviceKey, { Accept: 'application/json' }),
+  });
+
+  if (res.status === 401 || res.status === 403) {
     const role = decodeJwtRole(serviceKey);
     console.error(
       'Supabase rejected the API key.\n\n' +
@@ -127,10 +145,14 @@ async function verifySupabaseConnection(supabase, url, serviceKey) {
     );
     throw new Error('Invalid Supabase API key');
   }
-  if (error?.code === '42P01') {
-    throw new Error('Table "instruments" not found. Run supabase/instruments.sql in SQL Editor first.');
+
+  if (!res.ok) {
+    const error = await readSupabaseError(res);
+    if (error.code === '42P01' || String(error.message).includes('instruments')) {
+      throw new Error('Table "instruments" not found. Run supabase/instruments.sql in SQL Editor first.');
+    }
+    throw new Error(error.message || `Supabase check failed (${res.status})`);
   }
-  if (error) throw error;
 }
 
 function parseCsvLine(line) {
@@ -256,12 +278,19 @@ async function fetchCsv() {
   return res.text();
 }
 
-async function upsertBatch(supabase, batch) {
-  const { error } = await supabase.from('instruments').upsert(batch, {
-    onConflict: 'exchange,tradingsymbol',
+async function upsertBatch(url, serviceKey, batch) {
+  const res = await fetch(`${url}/rest/v1/instruments?on_conflict=exchange,tradingsymbol`, {
+    method: 'POST',
+    headers: supabaseRestHeaders(serviceKey, {
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    }),
+    body: JSON.stringify(batch),
   });
-  if (error) {
-    if (error.message?.includes('Invalid API key')) {
+
+  if (!res.ok) {
+    const error = await readSupabaseError(res);
+    if (res.status === 401 || res.status === 403) {
       throw new Error(
         'Invalid API key — use SUPABASE_SERVICE_ROLE_KEY from Supabase → Settings → API → service_role (not anon).'
       );
@@ -271,19 +300,15 @@ async function upsertBatch(supabase, batch) {
         'Table "instruments" not found. Run supabase/instruments.sql in the SQL Editor first.'
       );
     }
-    throw error;
+    throw new Error(error.message || `Upsert failed (${res.status})`);
   }
 }
 
 async function main() {
   const { url, serviceKey } = resolveSupabaseConfig();
-  const supabase = createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    realtime: { transport: ws },
-  });
 
   console.log('Checking Supabase connection…');
-  await verifySupabaseConnection(supabase, url, serviceKey);
+  await verifySupabaseConnection(url, serviceKey);
 
   console.log('Downloading Kite instruments CSV…');
   const csv = await fetchCsv();
@@ -302,7 +327,7 @@ async function main() {
     }
     batch.push(record);
     if (batch.length >= BATCH_SIZE) {
-      await upsertBatch(supabase, batch);
+      await upsertBatch(url, serviceKey, batch);
       total += batch.length;
       console.log(`Upserted ${total} instruments…`);
       batch = [];
@@ -310,7 +335,7 @@ async function main() {
   }
 
   if (batch.length) {
-    await upsertBatch(supabase, batch);
+    await upsertBatch(url, serviceKey, batch);
     total += batch.length;
   }
 

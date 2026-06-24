@@ -17,6 +17,8 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - run: node --version
+
       - run: npm ci
 
       - name: Sync instruments to Supabase
