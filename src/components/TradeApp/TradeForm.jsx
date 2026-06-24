@@ -50,6 +50,14 @@ const tradeSchema = z
     lots: z.coerce.number().optional(),
   })
   .superRefine((data, ctx) => {
+    if (data.entry_date && data.exit_date && data.exit_date < data.entry_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Exit date must be on or after entry date',
+        path: ['exit_date'],
+      });
+    }
+
     if (isEquitySegment(data.segment)) {
       if (!data.quantity || data.quantity <= 0) {
         ctx.addIssue({

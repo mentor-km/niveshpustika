@@ -128,20 +128,3 @@ export function getBestWorstTrades(trades = [], count = 3) {
 
   return { best, worst };
 }
-
-export function getTrialInfo(profile) {
-  const start = new Date(profile?.created_at || Date.now());
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
-  const now = new Date();
-  const msLeft = end.getTime() - now.getTime();
-  const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
-
-  return {
-    startDate: start,
-    endDate: end,
-    daysLeft,
-    isActive: msLeft > 0,
-    status: msLeft > 0 ? 'trial' : 'free',
-  };
-}

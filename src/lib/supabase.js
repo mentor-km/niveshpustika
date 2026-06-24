@@ -120,12 +120,6 @@ export function formatCurrency(value) {
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 
-export async function getSession() {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  return data.session;
-}
-
 export async function sendPhoneOtp(phone) {
   const formatted = formatPhone(phone);
   const { data, error } = await supabase.auth.signInWithOtp({
@@ -372,14 +366,4 @@ export async function fetchUserAdminSummary(userId) {
     wins,
     losses,
   };
-}
-
-export async function fetchTradesByUserId(userId) {
-  const { data, error } = await supabase
-    .from('trades')
-    .select('*')
-    .eq('user_id', userId)
-    .order('entry_time', { ascending: false });
-  if (error) throw error;
-  return data ?? [];
 }
