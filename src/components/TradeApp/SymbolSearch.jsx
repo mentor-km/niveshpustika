@@ -1,23 +1,69 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, PenLine } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { searchInstruments, formatInstrumentLabel } from '@/lib/instruments';
 
-const inputClass = 'bg-white border-teal-200 text-slate-800';
+const inputClass = 'bg-white border-teal-200 text-slate-800 text-base md:text-sm';
+const GAP = 4;
+const MIN_LIST_HEIGHT = 120;
+const MAX_LIST_HEIGHT = 288;
 
 function preventInputBlur(e) {
   e.preventDefault();
 }
 
-export default function SymbolSearch({ segment, value, onChange, onSelectInstrument, disabled }) {
+function computeListLayout(inputEl) {
+  if (!inputEl) return null;
+
+  const rect = inputEl.getBoundingClientRect();
+  const viewport = window.visualViewport;
+  const vpTop = viewport?.offsetTop ?? 0;
+  const vpHeight = viewport?.height ?? window.innerHeight;
+  const vpBottom = vpTop + vpHeight;
+
+  const spaceBelow = vpBottom - rect.bottom - GAP;
+  const spaceAbove = rect.top - vpTop - GAP;
+  const openBelow = spaceBelow >= spaceAbove;
+  const available = Math.max(openBelow ? spaceBelow : spaceAbove, MIN_LIST_HEIGHT);
+  const maxHeight = Math.min(MAX_LIST_HEIGHT, Math.max(MIN_LIST_HEIGHT, available));
+  const top = openBelow
+    ? rect.bottom + GAP
+    : Math.max(vpTop + GAP, rect.top - maxHeight - GAP);
+
+  return {
+    position: 'fixed',
+    top,
+    left: rect.left,
+    width: rect.width,
+    maxHeight,
+    zIndex: 9999,
+    pointerEvents: 'auto',
+  };
+}
+
+const SymbolSearch = forwardRef(function SymbolSearch(
+  { segment, value, onChange, onSelectInstrument, disabled },
+  ref
+) {
   const [query, setQuery] = useState(value || '');
   const [open, setOpen] = useState(false);
   const [listStyle, setListStyle] = useState(null);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  useImperativeHandle(ref, () => ({ close }), [close]);
 
   useEffect(() => {
     setQuery(value || '');
@@ -33,15 +79,7 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
 
   const updateListPosition = useCallback(() => {
     if (!inputRef.current) return;
-    const rect = inputRef.current.getBoundingClientRect();
-    setListStyle({
-      position: 'fixed',
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-      zIndex: 9999,
-      pointerEvents: 'auto',
-    });
+    setListStyle(computeListLayout(inputRef.current));
   }, []);
 
   useEffect(() => {
@@ -63,7 +101,7 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
   useEffect(() => {
     if (!showList) {
       setListStyle(null);
-      return;
+      return undefined;
     }
     updateListPosition();
     window.addEventListener('scroll', updateListPosition, true);
@@ -107,12 +145,20 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
     e.stopPropagation();
   };
 
+  const handleFocus = () => {
+    setOpen(true);
+    requestAnimationFrame(() => {
+      inputRef.current?.scrollIntoView({ block: 'center', inline: 'nearest' });
+      updateListPosition();
+    });
+  };
+
   const dropdown = showList && listStyle && (
     <ul
       ref={listRef}
       data-symbol-search-dropdown
       style={{ ...listStyle, overscrollBehavior: 'contain', touchAction: 'pan-y' }}
-      className="max-h-72 overflow-y-auto rounded-md border border-teal-200 bg-white shadow-lg pointer-events-auto"
+      className="overflow-y-auto rounded-md border border-teal-200 bg-white shadow-lg pointer-events-auto"
       onWheel={stopScrollPropagation}
       onTouchMove={stopScrollPropagation}
     >
@@ -186,7 +232,7 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
           onChange(v);
           setOpen(true);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={handleFocus}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -204,4 +250,6 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
       {dropdown && createPortal(dropdown, document.body)}
     </div>
   );
-}
+});
+
+export default SymbolSearch;

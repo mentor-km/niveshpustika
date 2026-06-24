@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -84,9 +84,10 @@ const tradeSchema = z
     }
   });
 
-const inputClass = 'bg-white border-teal-200 text-slate-800';
+const inputClass = 'bg-white border-teal-200 text-slate-800 text-base md:text-sm';
 const labelClass = 'text-slate-600';
 const selectContentClass = 'bg-white border-teal-200 text-slate-800';
+const selectTriggerClass = `${inputClass} h-10`;
 
 function tradeToFormValues(trade) {
   if (!trade) {
@@ -145,6 +146,9 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = Boolean(trade?.id);
+  const symbolSearchRef = useRef(null);
+
+  const closeSymbolSearch = () => symbolSearchRef.current?.close();
 
   const form = useForm({
     resolver: zodResolver(tradeSchema),
@@ -211,7 +215,11 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             <FormItem>
               <FormLabel className={labelClass}>Segment</FormLabel>
               <Select
+                onOpenChange={(isOpen) => {
+                  if (isOpen) closeSymbolSearch();
+                }}
                 onValueChange={(val) => {
+                  closeSymbolSearch();
                   field.onChange(val);
                   form.setValue('symbol', '');
                   form.setValue('quantity', '');
@@ -221,7 +229,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
                 value={field.value}
               >
                 <FormControl>
-                  <SelectTrigger className={inputClass}>
+                  <SelectTrigger className={selectTriggerClass}>
                     <SelectValue placeholder="Select segment" />
                   </SelectTrigger>
                 </FormControl>
@@ -246,6 +254,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
               <FormLabel className={labelClass}>Symbol</FormLabel>
               <FormControl>
                 <SymbolSearch
+                  ref={symbolSearchRef}
                   segment={watched.segment}
                   value={field.value}
                   onChange={field.onChange}
@@ -315,9 +324,15 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className={labelClass}>Direction</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onOpenChange={(isOpen) => {
+                      if (isOpen) closeSymbolSearch();
+                    }}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
                     <FormControl>
-                      <SelectTrigger className={inputClass}>
+                      <SelectTrigger className={selectTriggerClass}>
                         <SelectValue placeholder="Direction" />
                       </SelectTrigger>
                     </FormControl>
@@ -367,9 +382,15 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className={labelClass}>Direction</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onOpenChange={(isOpen) => {
+                      if (isOpen) closeSymbolSearch();
+                    }}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
                     <FormControl>
-                      <SelectTrigger className={inputClass}>
+                      <SelectTrigger className={selectTriggerClass}>
                         <SelectValue placeholder="Direction" />
                       </SelectTrigger>
                     </FormControl>
