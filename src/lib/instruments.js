@@ -64,6 +64,74 @@ function resolveInstrumentTypes(segment, parsedType) {
   return null;
 }
 
+/** Lower score = better match. Symbol prefix beats name-only (e.g. mutual funds). */
+export function scoreEquityMatch(term, inst) {
+  const sym = (inst.tradingsymbol || '').toUpperCase();
+  const name = (inst.name || '').toUpperCase();
+  const t = term.toUpperCase();
+
+  let score;
+  if (sym === t) score = 0;
+  else if (sym.startsWith(t)) score = 10 + Math.min(sym.length - t.length, 40);
+  else if (name.startsWith(t)) score = 100;
+  else if (name.includes(t)) score = 200 + name.indexOf(t);
+  else score = 999;
+
+  if (inst.exchange === 'NSE') score -= 0.25;
+  return score;
+}
+
+function dedupeInstruments(rows, seen = new Set()) {
+  const out = [];
+  for (const row of rows ?? []) {
+    const key = `${row.exchange}-${row.tradingsymbol}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+async function searchEquity(parsed, limit = 25) {
+  const term = (parsed.underlying || parsed.compact).replace(/[%_\\]/g, '');
+  if (!term) return [];
+
+  const seen = new Set();
+  const merged = [];
+
+  const { data: bySymbol, error: symErr } = await supabase
+    .from('instruments')
+    .select(SELECT_FIELDS)
+    .eq('app_segment', 'Equity')
+    .ilike('tradingsymbol', `${term}%`)
+    .order('tradingsymbol', { ascending: true })
+    .limit(limit);
+
+  if (symErr) throw symErr;
+  merged.push(...dedupeInstruments(bySymbol, seen));
+
+  if (merged.length < limit) {
+    const { data: byName, error: nameErr } = await supabase
+      .from('instruments')
+      .select(SELECT_FIELDS)
+      .eq('app_segment', 'Equity')
+      .ilike('name', `%${term}%`)
+      .order('tradingsymbol', { ascending: true })
+      .limit(limit * 2);
+
+    if (nameErr) throw nameErr;
+    merged.push(...dedupeInstruments(byName, seen));
+  }
+
+  return merged
+    .sort((a, b) => {
+      const diff = scoreEquityMatch(term, a) - scoreEquityMatch(term, b);
+      if (diff !== 0) return diff;
+      return a.tradingsymbol.localeCompare(b.tradingsymbol);
+    })
+    .slice(0, limit);
+}
+
 /**
  * Search instrument master for autocomplete (requires instruments table + daily sync).
  */
@@ -100,6 +168,10 @@ export async function searchInstruments(segment, query) {
   const explicitTypes = resolveInstrumentTypes(segment, parsed.instrumentType);
 
   try {
+    if (segment === 'Equity') {
+      return await searchEquity(parsed);
+    }
+
     if (segment === 'Commodities' && !parsed.instrumentType) {
       const { data: futures, error: futErr } = await buildQuery({ instrumentTypes: ['FUT'] });
       if (futErr) throw futErr;
