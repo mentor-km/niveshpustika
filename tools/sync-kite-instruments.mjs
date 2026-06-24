@@ -154,19 +154,29 @@ function parseCsvLine(line) {
 }
 
 function toAppSegment({ exchange, segment, instrument_type }) {
-  if (instrument_type === 'EQ' && (exchange === 'NSE' || exchange === 'BSE')) {
+  const ex = (exchange || '').toUpperCase();
+  const seg = (segment || '').toUpperCase();
+  const typ = (instrument_type || '').toUpperCase();
+
+  if (typ === 'EQ' && (ex === 'NSE' || ex === 'BSE')) {
     return 'Equity';
   }
-  if (instrument_type === 'FUT') {
-    if (exchange === 'MCX') return 'Commodities';
-    if (segment === 'CDS') return 'Currency';
-    if (exchange === 'NSE' || exchange === 'BFO') return 'Futures';
+
+  const isMcx = ex === 'MCX' || seg === 'MCX';
+  const isCds = ex === 'CDS' || seg === 'CDS';
+  const isNfo = ex === 'NFO' || seg === 'NFO';
+  const isBfo = ex === 'BFO' || seg === 'BFO';
+
+  if (typ === 'FUT') {
+    if (isMcx) return 'Commodities';
+    if (isCds) return 'Currency';
+    if (isNfo || isBfo) return 'Futures';
     return null;
   }
-  if (instrument_type === 'CE' || instrument_type === 'PE') {
-    if (exchange === 'MCX') return 'Commodities';
-    if (segment === 'CDS') return 'Currency';
-    if (exchange === 'NSE' || exchange === 'BFO') return 'Options';
+  if (typ === 'CE' || typ === 'PE') {
+    if (isMcx) return 'Commodities';
+    if (isCds) return 'Currency';
+    if (isNfo || isBfo) return 'Options';
     return null;
   }
   return null;

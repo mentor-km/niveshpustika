@@ -8,7 +8,7 @@ export async function searchInstruments(segment, query) {
   if (!segment || !q || q.length < 2) return [];
 
   const today = new Date().toISOString().slice(0, 10);
-  const escaped = q.replace(/[%_]/g, '');
+  const escaped = q.replace(/[%_\\]/g, '');
 
   let builder = supabase
     .from('instruments')
@@ -18,8 +18,12 @@ export async function searchInstruments(segment, query) {
     .order('tradingsymbol', { ascending: true })
     .limit(25);
 
-  if (segment !== 'Equity') {
-    builder = builder.or(`expiry.is.null,expiry.gte.${today}`);
+  if (segment === 'Futures') {
+    builder = builder.eq('instrument_type', 'FUT').gte('expiry', today);
+  } else if (segment === 'Options') {
+    builder = builder.in('instrument_type', ['CE', 'PE']).gte('expiry', today);
+  } else if (segment === 'Currency' || segment === 'Commodities') {
+    builder = builder.gte('expiry', today);
   }
 
   const { data, error } = await builder;
