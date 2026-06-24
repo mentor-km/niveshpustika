@@ -40,6 +40,7 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
       left: rect.left,
       width: rect.width,
       zIndex: 9999,
+      pointerEvents: 'auto',
     });
   }, []);
 
@@ -96,6 +97,7 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
   const dropdown = showList && listStyle && (
     <ul
       ref={listRef}
+      data-symbol-search-dropdown
       style={listStyle}
       className="max-h-72 overflow-y-auto rounded-md border border-teal-200 bg-white shadow-lg"
     >
@@ -114,8 +116,10 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
           <button
             type="button"
             className="w-full text-left px-3 py-2 hover:bg-teal-50 active:bg-teal-100 border-b border-teal-50 last:border-0"
-            onPointerDown={preventInputBlur}
-            onClick={() => selectInstrument(inst)}
+            onPointerDown={(e) => {
+              preventInputBlur(e);
+              selectInstrument(inst);
+            }}
           >
             <span className="block font-medium text-slate-800 text-sm">{inst.tradingsymbol}</span>
             <span className="block text-xs text-slate-500 truncate">
@@ -129,8 +133,10 @@ export default function SymbolSearch({ segment, value, onChange, onSelectInstrum
           <button
             type="button"
             className="w-full text-left px-3 py-2.5 hover:bg-teal-50 active:bg-teal-100 bg-teal-50/50 flex items-start gap-2"
-            onPointerDown={preventInputBlur}
-            onClick={acceptManualSymbol}
+            onPointerDown={(e) => {
+              preventInputBlur(e);
+              acceptManualSymbol();
+            }}
           >
             <PenLine className="h-4 w-4 text-[#2d8b8b] mt-0.5 shrink-0" />
             <span>
