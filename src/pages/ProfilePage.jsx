@@ -24,6 +24,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProfile, updateProfile, signOut, displayPhone } from '@/lib/supabase';
 
+const CARD = 'bg-white/90 backdrop-blur-sm border-teal-200/60 shadow-lg shadow-teal-900/5';
+
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
 });
@@ -52,7 +54,7 @@ export default function ProfilePage() {
       toast({
         title: 'Profile Updated',
         description: 'Your name has been saved.',
-        className: 'bg-emerald-500 text-white',
+        className: 'bg-[#2d8b8b] text-white',
       });
     },
     onError: (err) => {
@@ -73,7 +75,7 @@ export default function ProfilePage() {
     return (
       <AppLayout showFab={false}>
         <div className="flex justify-center py-24">
-          <Spinner className="w-8 h-8 text-emerald-500" />
+          <Spinner className="w-8 h-8 text-[#2d8b8b]" />
         </div>
       </AppLayout>
     );
@@ -82,8 +84,8 @@ export default function ProfilePage() {
   if (error) {
     return (
       <AppLayout showFab={false}>
-        <Card className="bg-gray-800 border-gray-700">
-          <CardContent className="py-12 text-center text-red-400">
+        <Card className={CARD}>
+          <CardContent className="py-12 text-center text-[#f0544f]">
             Failed to load profile: {error.message}
           </CardContent>
         </Card>
@@ -100,35 +102,35 @@ export default function ProfilePage() {
         className="max-w-2xl mx-auto space-y-6"
       >
         <div className="flex items-center gap-3 mb-2">
-          <User className="w-8 h-8 text-emerald-500" />
-          <h1 className="text-3xl font-bold font-heading text-white">Profile</h1>
+          <User className="w-8 h-8 text-[#2d8b8b]" />
+          <h1 className="text-3xl font-bold font-heading text-slate-800">Profile</h1>
         </div>
 
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className={CARD}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Shield className="w-5 h-5 text-emerald-500" />
+            <CardTitle className="text-slate-800 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-[#2d8b8b]" />
               Account
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
-              <p className="text-emerald-400 font-semibold">Standard Plan</p>
-              <p className="text-gray-400 text-sm mt-1">
+            <div className="bg-teal-50 border border-teal-200/60 rounded-lg p-4">
+              <p className="text-[#2d8b8b] font-semibold">Standard Plan</p>
+              <p className="text-slate-500 text-sm mt-1">
                 Full access to log trades, dashboard, and analytics.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-slate-500">
               <Calendar className="w-4 h-4" />
               Member since {format(new Date(profile.created_at), 'dd MMM yyyy')}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className={CARD}>
           <CardHeader>
-            <CardTitle className="text-white">Personal Info</CardTitle>
-            <CardDescription className="text-gray-400">Update your display name</CardDescription>
+            <CardTitle className="text-slate-800">Personal Info</CardTitle>
+            <CardDescription className="text-slate-500">Update your display name</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...profileForm}>
@@ -141,12 +143,12 @@ export default function ProfilePage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-300">Full Name</FormLabel>
+                      <FormLabel className="text-slate-600">Full Name</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                           <Input
-                            className="pl-10 bg-gray-900 border-gray-600 text-white"
+                            className="pl-10 bg-white border-teal-200 text-slate-800"
                             {...field}
                           />
                         </div>
@@ -156,23 +158,23 @@ export default function ProfilePage() {
                   )}
                 />
                 <div className="space-y-2">
-                  <label htmlFor="profile-phone" className="text-sm font-medium text-gray-300">
+                  <label htmlFor="profile-phone" className="text-sm font-medium text-slate-600">
                     Mobile
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                     <Input
                       id="profile-phone"
                       value={displayPhone(user)}
                       disabled
-                      className="pl-10 bg-gray-900/50 border-gray-600 text-gray-400"
+                      className="pl-10 bg-teal-50/50 border-teal-200 text-slate-500"
                     />
                   </div>
                 </div>
                 <Button
                   type="submit"
                   disabled={profileMutation.isPending}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-[#2d8b8b] hover:bg-[#267a7a] text-white"
                 >
                   {profileMutation.isPending ? <Spinner className="mr-2" /> : null}
                   Save Changes
@@ -184,7 +186,7 @@ export default function ProfilePage() {
 
         <Button
           variant="outline"
-          className="w-full border-gray-600 text-red-400 hover:text-red-300"
+          className="w-full border-red-200 text-[#f0544f] hover:bg-red-50 hover:!text-[#f0544f]"
           onClick={handleLogout}
         >
           <LogOut className="w-4 h-4 mr-2" />

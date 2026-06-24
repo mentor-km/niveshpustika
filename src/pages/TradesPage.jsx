@@ -13,8 +13,8 @@ export default function TradesPage() {
         transition={{ duration: 0.5 }}
       >
         <div className="flex items-center gap-3 mb-8">
-          <List className="w-8 h-8 text-emerald-500" />
-          <h1 className="text-3xl font-bold font-heading text-white">My Trades</h1>
+          <List className="w-8 h-8 text-[#2d8b8b]" />
+          <h1 className="text-3xl font-bold font-heading text-slate-800">My Trades</h1>
         </div>
         <TradeList />
       </motion.div>

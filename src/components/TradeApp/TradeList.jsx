@@ -46,6 +46,8 @@ import {
   formatCurrency,
 } from '@/lib/supabase';
 
+const CARD = 'bg-white/90 backdrop-blur-sm border-teal-200/60 shadow-lg shadow-teal-900/5';
+
 export default function TradeList({ userId: overrideUserId }) {
   const { user } = useAuth();
   const userId = overrideUserId ?? user?.id;
@@ -68,7 +70,7 @@ export default function TradeList({ userId: overrideUserId }) {
       toast({
         title: 'Trade Deleted',
         description: 'The trade has been removed.',
-        className: 'bg-emerald-500 text-white',
+        className: 'bg-[#2d8b8b] text-white',
       });
       setDeletingTrade(null);
     },
@@ -89,15 +91,15 @@ export default function TradeList({ userId: overrideUserId }) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner className="w-8 h-8 text-emerald-500" />
+        <Spinner className="w-8 h-8 text-[#2d8b8b]" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="bg-gray-800 border-gray-700">
-        <CardContent className="py-8 text-center text-red-400">
+      <Card className={CARD}>
+        <CardContent className="py-8 text-center text-[#f0544f]">
           Failed to load trades: {error.message}
         </CardContent>
       </Card>
@@ -106,14 +108,14 @@ export default function TradeList({ userId: overrideUserId }) {
 
   return (
     <>
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className={CARD}>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="text-white">Trade History</CardTitle>
+          <CardTitle className="text-slate-800">Trade History</CardTitle>
           <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-            <SelectTrigger className="w-full sm:w-48 bg-gray-900 border-gray-600 text-white">
+            <SelectTrigger className="w-full sm:w-48 bg-white border-teal-200 text-slate-800">
               <SelectValue placeholder="Filter by segment" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-600 text-white">
+            <SelectContent className="bg-white border-teal-200 text-slate-800">
               <SelectItem value="all">All Segments</SelectItem>
               {TRADE_SEGMENTS.map((seg) => (
                 <SelectItem key={seg} value={seg}>
@@ -125,49 +127,48 @@ export default function TradeList({ userId: overrideUserId }) {
         </CardHeader>
         <CardContent>
           {filteredTrades.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">
+            <p className="text-center text-slate-500 py-8">
               No trades found. Add your first trade to get started.
             </p>
           ) : (
             <>
-              {/* Desktop table */}
               <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-gray-700 hover:bg-transparent">
-                      <TableHead className="text-gray-400">Date</TableHead>
-                      <TableHead className="text-gray-400">Symbol</TableHead>
-                      <TableHead className="text-gray-400">Direction</TableHead>
-                      <TableHead className="text-gray-400">Qty</TableHead>
-                      <TableHead className="text-gray-400">Entry</TableHead>
-                      <TableHead className="text-gray-400">Exit</TableHead>
-                      <TableHead className="text-gray-400">P&L</TableHead>
-                      <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                    <TableRow className="border-teal-100 hover:bg-transparent">
+                      <TableHead className="text-slate-500">Date</TableHead>
+                      <TableHead className="text-slate-500">Symbol</TableHead>
+                      <TableHead className="text-slate-500">Direction</TableHead>
+                      <TableHead className="text-slate-500">Qty</TableHead>
+                      <TableHead className="text-slate-500">Entry</TableHead>
+                      <TableHead className="text-slate-500">Exit</TableHead>
+                      <TableHead className="text-slate-500">P&L</TableHead>
+                      <TableHead className="text-slate-500 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredTrades.map((trade) => (
-                      <TableRow key={trade.id} className="border-gray-700">
-                        <TableCell className="text-gray-300">
+                      <TableRow key={trade.id} className="border-teal-100">
+                        <TableCell className="text-slate-600">
                           {format(new Date(trade.entry_time), 'dd MMM yyyy')}
                         </TableCell>
-                        <TableCell className="text-white font-medium">{trade.symbol}</TableCell>
+                        <TableCell className="text-slate-800 font-medium">{trade.symbol}</TableCell>
                         <TableCell>
                           <span
                             className={`capitalize text-xs px-2 py-1 rounded-full ${
                               trade.direction === 'long'
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-red-500/20 text-red-400'
+                                ? 'bg-teal-100 text-[#2d8b8b]'
+                                : 'bg-red-100 text-[#f0544f]'
                             }`}
                           >
                             {trade.direction}
                           </span>
                         </TableCell>
-                        <TableCell className="text-gray-300">{trade.quantity}</TableCell>
-                        <TableCell className="text-gray-300">{trade.entry_price}</TableCell>
-                        <TableCell className="text-gray-300">{trade.exit_price}</TableCell>
+                        <TableCell className="text-slate-600">{trade.quantity}</TableCell>
+                        <TableCell className="text-slate-600">{trade.entry_price}</TableCell>
+                        <TableCell className="text-slate-600">{trade.exit_price}</TableCell>
                         <TableCell
-                          className={Number(trade.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}
+                          className={Number(trade.pnl) >= 0 ? 'text-[#2d8b8b]' : 'text-[#f0544f]'}
                         >
                           {formatCurrency(trade.pnl)}
                         </TableCell>
@@ -177,7 +178,7 @@ export default function TradeList({ userId: overrideUserId }) {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="text-gray-400 hover:text-emerald-400"
+                                className="text-slate-400 hover:text-[#2d8b8b]"
                                 onClick={() => setEditingTrade(trade)}
                               >
                                 <Pencil className="w-4 h-4" />
@@ -185,7 +186,7 @@ export default function TradeList({ userId: overrideUserId }) {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="text-gray-400 hover:text-red-400"
+                                className="text-slate-400 hover:text-[#f0544f]"
                                 onClick={() => setDeletingTrade(trade)}
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -199,40 +200,39 @@ export default function TradeList({ userId: overrideUserId }) {
                 </Table>
               </div>
 
-              {/* Mobile cards */}
               <div className="md:hidden space-y-3">
                 {filteredTrades.map((trade) => (
                   <div
                     key={trade.id}
-                    className="bg-gray-900 rounded-lg p-4 border border-gray-700"
+                    className="bg-teal-50/50 rounded-lg p-4 border border-teal-200/60"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="text-white font-semibold">{trade.symbol}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-slate-800 font-semibold">{trade.symbol}</p>
+                        <p className="text-xs text-slate-500">
                           {format(new Date(trade.entry_time), 'dd MMM yyyy')} · {trade.segment}
                         </p>
                       </div>
                       <span
                         className={`text-sm font-semibold ${
-                          Number(trade.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          Number(trade.pnl) >= 0 ? 'text-[#2d8b8b]' : 'text-[#f0544f]'
                         }`}
                       >
                         {formatCurrency(trade.pnl)}
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs text-gray-400 mb-3">
+                    <div className="grid grid-cols-3 gap-2 text-xs text-slate-500 mb-3">
                       <div>
-                        <span className="block text-gray-500">Dir</span>
-                        <span className="capitalize text-gray-300">{trade.direction}</span>
+                        <span className="block text-slate-400">Dir</span>
+                        <span className="capitalize text-slate-600">{trade.direction}</span>
                       </div>
                       <div>
-                        <span className="block text-gray-500">Entry</span>
-                        <span className="text-gray-300">{trade.entry_price}</span>
+                        <span className="block text-slate-400">Entry</span>
+                        <span className="text-slate-600">{trade.entry_price}</span>
                       </div>
                       <div>
-                        <span className="block text-gray-500">Exit</span>
-                        <span className="text-gray-300">{trade.exit_price}</span>
+                        <span className="block text-slate-400">Exit</span>
+                        <span className="text-slate-600">{trade.exit_price}</span>
                       </div>
                     </div>
                     {!overrideUserId && (
@@ -240,7 +240,7 @@ export default function TradeList({ userId: overrideUserId }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 border-gray-600 text-gray-300"
+                          className="flex-1 border-teal-200 text-slate-600 hover:bg-teal-50 hover:!text-slate-800"
                           onClick={() => setEditingTrade(trade)}
                         >
                           <Pencil className="w-3 h-3 mr-1" /> Edit
@@ -248,7 +248,7 @@ export default function TradeList({ userId: overrideUserId }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 border-red-800 text-red-400"
+                          className="flex-1 border-red-200 text-[#f0544f] hover:bg-red-50 hover:!text-[#f0544f]"
                           onClick={() => setDeletingTrade(trade)}
                         >
                           <Trash2 className="w-3 h-3 mr-1" /> Delete
@@ -264,9 +264,9 @@ export default function TradeList({ userId: overrideUserId }) {
       </Card>
 
       <Dialog open={Boolean(editingTrade)} onOpenChange={() => setEditingTrade(null)}>
-        <DialogContent className="bg-gray-900 border-gray-700 text-white max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-white border-teal-200/60 text-slate-800 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Trade</DialogTitle>
+            <DialogTitle className="text-slate-800">Edit Trade</DialogTitle>
           </DialogHeader>
           {editingTrade && (
             <TradeForm
@@ -279,20 +279,20 @@ export default function TradeList({ userId: overrideUserId }) {
       </Dialog>
 
       <AlertDialog open={Boolean(deletingTrade)} onOpenChange={() => setDeletingTrade(null)}>
-        <AlertDialogContent className="bg-gray-900 border-gray-700 text-white">
+        <AlertDialogContent className="bg-white border-teal-200/60 text-slate-800">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Trade</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-slate-800">Delete Trade</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500">
               Are you sure you want to delete the {deletingTrade?.symbol} trade? This cannot be
               undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-800 border-gray-600 text-gray-300">
+            <AlertDialogCancel className="border-teal-200 text-slate-600 hover:bg-teal-50 hover:!text-slate-800">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-[#f0544f] hover:bg-[#d94540] text-white"
               onClick={() => deleteMutation.mutate(deletingTrade.id)}
               disabled={deleteMutation.isPending}
             >

@@ -59,24 +59,29 @@ const KPI_CONFIG = [
   { key: 'largestLoss', label: 'Worst Trade', icon: AlertTriangle, format: formatCurrency },
 ];
 
+const CARD = 'bg-white/90 backdrop-blur-sm border-teal-200/60 shadow-lg shadow-teal-900/5';
+
 const CHART_TOOLTIP = {
   contentStyle: {
-    backgroundColor: '#1f2937',
-    border: '1px solid #374151',
+    backgroundColor: '#ffffff',
+    border: '1px solid rgba(45, 139, 139, 0.25)',
     borderRadius: '8px',
-    color: '#fff',
+    color: '#1e293b',
   },
 };
 
+const TEAL = '#2d8b8b';
+const CORAL = '#f0544f';
+
 function KpiCard({ label, value, icon: Icon, valueClass }) {
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className={CARD}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle>
-        <Icon className="w-4 h-4 text-emerald-500" />
+        <CardTitle className="text-sm font-medium text-slate-500">{label}</CardTitle>
+        <Icon className="w-4 h-4 text-[#2d8b8b]" />
       </CardHeader>
       <CardContent>
-        <p className={`text-xl font-bold ${valueClass || 'text-white'}`}>{value}</p>
+        <p className={`text-xl font-bold ${valueClass || 'text-slate-800'}`}>{value}</p>
       </CardContent>
     </Card>
   );
@@ -85,14 +90,14 @@ function KpiCard({ label, value, icon: Icon, valueClass }) {
 function TradeHighlight({ trade, type }) {
   const isBest = type === 'best';
   return (
-    <div className="flex justify-between items-center py-2 border-b border-gray-700 last:border-0">
+    <div className="flex justify-between items-center py-2 border-b border-teal-100 last:border-0">
       <div>
-        <p className="text-white font-medium">{trade.symbol}</p>
-        <p className="text-xs text-gray-500">
+        <p className="text-slate-800 font-medium">{trade.symbol}</p>
+        <p className="text-xs text-slate-500">
           {trade.segment} · {format(new Date(trade.exit_time), 'dd MMM yyyy')}
         </p>
       </div>
-      <span className={`font-semibold ${isBest ? 'text-emerald-400' : 'text-red-400'}`}>
+      <span className={`font-semibold ${isBest ? 'text-[#2d8b8b]' : 'text-[#f0544f]'}`}>
         {formatCurrency(trade.pnl)}
       </span>
     </div>
@@ -115,20 +120,20 @@ export default function DashboardPage() {
   const { best, worst } = getBestWorstTrades(trades);
 
   const pieData = [
-    { name: 'Wins', value: stats.wins, color: '#10b981' },
-    { name: 'Losses', value: stats.losses, color: '#ef4444' },
+    { name: 'Wins', value: stats.wins, color: TEAL },
+    { name: 'Losses', value: stats.losses, color: CORAL },
   ].filter((d) => d.value > 0);
 
   const avgBarData = [
-    { name: 'Avg Win', value: stats.avgWin, fill: '#10b981' },
-    { name: 'Avg Loss', value: stats.avgLoss, fill: '#ef4444' },
+    { name: 'Avg Win', value: stats.avgWin, fill: TEAL },
+    { name: 'Avg Loss', value: stats.avgLoss, fill: CORAL },
   ];
 
   if (isLoading) {
     return (
       <AppLayout>
         <div className="flex justify-center py-24">
-          <Spinner className="w-8 h-8 text-emerald-500" />
+          <Spinner className="w-8 h-8 text-[#2d8b8b]" />
         </div>
       </AppLayout>
     );
@@ -137,8 +142,8 @@ export default function DashboardPage() {
   if (error) {
     return (
       <AppLayout>
-        <Card className="bg-gray-800 border-gray-700">
-          <CardContent className="py-12 text-center text-red-400">
+        <Card className={CARD}>
+          <CardContent className="py-12 text-center text-[#f0544f]">
             Failed to load dashboard: {error.message}
           </CardContent>
         </Card>
@@ -155,8 +160,8 @@ export default function DashboardPage() {
         className="space-y-8"
       >
         <div className="flex items-center gap-3">
-          <BarChart3 className="w-8 h-8 text-emerald-500" />
-          <h1 className="text-3xl font-bold font-heading text-white">Dashboard</h1>
+          <BarChart3 className="w-8 h-8 text-[#2d8b8b]" />
+          <h1 className="text-3xl font-bold font-heading text-slate-800">Dashboard</h1>
         </div>
 
         {/* KPI grid */}
@@ -167,9 +172,9 @@ export default function DashboardPage() {
             const valueClass =
               isPnL && raw !== 0
                 ? raw > 0
-                  ? 'text-emerald-400'
-                  : 'text-red-400'
-                : 'text-white';
+                  ? 'text-[#2d8b8b]'
+                  : 'text-[#f0544f]'
+                : 'text-slate-800';
 
             return (
               <KpiCard
@@ -184,19 +189,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Equity curve - full width */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className={CARD}>
           <CardHeader>
-            <CardTitle className="text-white">Equity Curve</CardTitle>
+            <CardTitle className="text-slate-800">Equity Curve</CardTitle>
           </CardHeader>
           <CardContent>
             {equityCurve.length === 0 ? (
-              <p className="text-gray-400 text-center py-12">Log trades to see your equity curve.</p>
+              <p className="text-slate-500 text-center py-12">Log trades to see your equity curve.</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={equityCurve}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#9ca3af" tickFormatter={(v) => `₹${v}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="date" stroke="#64748b" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="#64748b" tickFormatter={(v) => `₹${v}`} />
                   <Tooltip
                     formatter={(value, name) =>
                       name === 'cumulative' ? [formatCurrency(value), 'Cumulative P&L'] : [formatCurrency(value), 'Trade P&L']
@@ -213,9 +218,9 @@ export default function DashboardPage() {
                     type="monotone"
                     dataKey="cumulative"
                     name="Cumulative P&L"
-                    stroke="#10b981"
+                    stroke={TEAL}
                     strokeWidth={2}
-                    dot={{ fill: '#10b981', r: 3 }}
+                    dot={{ fill: TEAL, r: 3 }}
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
@@ -226,13 +231,13 @@ export default function DashboardPage() {
 
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={CARD}>
             <CardHeader>
-              <CardTitle className="text-white">Win vs Loss</CardTitle>
+              <CardTitle className="text-slate-800">Win vs Loss</CardTitle>
             </CardHeader>
             <CardContent>
               {pieData.length === 0 ? (
-                <p className="text-gray-400 text-center py-12">No trade data yet.</p>
+                <p className="text-slate-500 text-center py-12">No trade data yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
@@ -258,19 +263,19 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={CARD}>
             <CardHeader>
-              <CardTitle className="text-white">P&L by Segment</CardTitle>
+              <CardTitle className="text-slate-800">P&L by Segment</CardTitle>
             </CardHeader>
             <CardContent>
               {segmentData.length === 0 ? (
-                <p className="text-gray-400 text-center py-12">No segment data yet.</p>
+                <p className="text-slate-500 text-center py-12">No segment data yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={segmentData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis type="number" stroke="#9ca3af" tickFormatter={(v) => `₹${v}`} />
-                    <YAxis type="category" dataKey="segment" stroke="#9ca3af" width={100} tick={{ fontSize: 11 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" stroke="#64748b" tickFormatter={(v) => `₹${v}`} />
+                    <YAxis type="category" dataKey="segment" stroke="#64748b" width={100} tick={{ fontSize: 11 }} />
                     <Tooltip
                       formatter={(value) => formatCurrency(value)}
                       {...CHART_TOOLTIP}
@@ -279,7 +284,7 @@ export default function DashboardPage() {
                       {segmentData.map((entry) => (
                         <Cell
                           key={entry.segment}
-                          fill={entry.pnl >= 0 ? '#10b981' : '#ef4444'}
+                          fill={entry.pnl >= 0 ? TEAL : CORAL}
                         />
                       ))}
                     </Bar>
@@ -292,19 +297,19 @@ export default function DashboardPage() {
 
         {/* Avg win/loss + best/worst */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={CARD}>
             <CardHeader>
-              <CardTitle className="text-white">Avg Win vs Loss</CardTitle>
+              <CardTitle className="text-slate-800">Avg Win vs Loss</CardTitle>
             </CardHeader>
             <CardContent>
               {stats.totalTrades === 0 ? (
-                <p className="text-gray-400 text-center py-12">No data yet.</p>
+                <p className="text-slate-500 text-center py-12">No data yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={avgBarData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="name" stroke="#9ca3af" />
-                    <YAxis stroke="#9ca3af" tickFormatter={(v) => `₹${v}`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="name" stroke="#64748b" />
+                    <YAxis stroke="#64748b" tickFormatter={(v) => `₹${v}`} />
                     <Tooltip formatter={(value) => formatCurrency(value)} {...CHART_TOOLTIP} />
                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                       {avgBarData.map((entry) => (
@@ -317,32 +322,32 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={CARD}>
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-emerald-500" />
+              <CardTitle className="text-slate-800 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-[#2d8b8b]" />
                 Top Winners
               </CardTitle>
             </CardHeader>
             <CardContent>
               {best.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">No trades yet.</p>
+                <p className="text-slate-500 text-center py-8">No trades yet.</p>
               ) : (
                 best.map((t) => <TradeHighlight key={t.id} trade={t} type="best" />)
               )}
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={CARD}>
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
+              <CardTitle className="text-slate-800 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-[#f0544f]" />
                 Top Losers
               </CardTitle>
             </CardHeader>
             <CardContent>
               {worst.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">No trades yet.</p>
+                <p className="text-slate-500 text-center py-8">No trades yet.</p>
               ) : (
                 worst.map((t) => <TradeHighlight key={t.id} trade={t} type="worst" />)
               )}
@@ -351,32 +356,32 @@ export default function DashboardPage() {
         </div>
 
         {/* Monthly summary */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className={CARD}>
           <CardHeader>
-            <CardTitle className="text-white">Monthly Summary</CardTitle>
+            <CardTitle className="text-slate-800">Monthly Summary</CardTitle>
           </CardHeader>
           <CardContent>
             {monthlyData.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">No monthly data yet.</p>
+              <p className="text-slate-500 text-center py-8">No monthly data yet.</p>
             ) : (
               <>
                 <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-gray-700 hover:bg-transparent">
-                        <TableHead className="text-gray-400">Month</TableHead>
-                        <TableHead className="text-gray-400">Trades</TableHead>
-                        <TableHead className="text-gray-400">Win Rate</TableHead>
-                        <TableHead className="text-gray-400">Net P&L</TableHead>
+                      <TableRow className="border-teal-100 hover:bg-transparent">
+                        <TableHead className="text-slate-500">Month</TableHead>
+                        <TableHead className="text-slate-500">Trades</TableHead>
+                        <TableHead className="text-slate-500">Win Rate</TableHead>
+                        <TableHead className="text-slate-500">Net P&L</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {monthlyData.map((m) => (
-                        <TableRow key={m.key} className="border-gray-700">
-                          <TableCell className="text-white">{m.label}</TableCell>
-                          <TableCell className="text-gray-300">{m.trades}</TableCell>
-                          <TableCell className="text-gray-300">{m.winRate.toFixed(1)}%</TableCell>
-                          <TableCell className={m.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                        <TableRow key={m.key} className="border-teal-100">
+                          <TableCell className="text-slate-800">{m.label}</TableCell>
+                          <TableCell className="text-slate-600">{m.trades}</TableCell>
+                          <TableCell className="text-slate-600">{m.winRate.toFixed(1)}%</TableCell>
+                          <TableCell className={m.pnl >= 0 ? 'text-[#2d8b8b]' : 'text-[#f0544f]'}>
                             {formatCurrency(m.pnl)}
                           </TableCell>
                         </TableRow>
@@ -386,14 +391,14 @@ export default function DashboardPage() {
                 </div>
                 <div className="md:hidden space-y-3">
                   {monthlyData.map((m) => (
-                    <div key={m.key} className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <div key={m.key} className="bg-teal-50/50 rounded-lg p-4 border border-teal-200/60">
                       <div className="flex justify-between items-center">
-                        <p className="text-white font-medium">{m.label}</p>
-                        <span className={m.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                        <p className="text-slate-800 font-medium">{m.label}</p>
+                        <span className={m.pnl >= 0 ? 'text-[#2d8b8b]' : 'text-[#f0544f]'}>
                           {formatCurrency(m.pnl)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-slate-500 mt-1">
                         {m.trades} trades · {m.winRate.toFixed(1)}% win rate
                       </p>
                     </div>

@@ -42,6 +42,10 @@ const tradeSchema = z.object({
   exit_time: z.string().min(1, 'Exit time is required'),
 });
 
+const inputClass = 'bg-white border-teal-200 text-slate-800';
+const labelClass = 'text-slate-600';
+const selectContentClass = 'bg-white border-teal-200 text-slate-800';
+
 function toDatetimeLocalValue(isoString) {
   if (!isoString) return '';
   const date = new Date(isoString);
@@ -109,7 +113,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
         description: isEditing
           ? 'Your trade has been updated successfully.'
           : 'Your trade has been logged successfully.',
-        className: 'bg-emerald-500 text-white',
+        className: 'bg-[#2d8b8b] text-white',
       });
       form.reset();
       onSuccess?.();
@@ -146,14 +150,14 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
           name="segment"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-gray-300">Segment</FormLabel>
+              <FormLabel className={labelClass}>Segment</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                  <SelectTrigger className={inputClass}>
                     <SelectValue placeholder="Select segment" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent className="bg-gray-800 border-gray-600 text-white">
+                <SelectContent className={selectContentClass}>
                   {TRADE_SEGMENTS.map((seg) => (
                     <SelectItem key={seg} value={seg}>
                       {seg}
@@ -171,11 +175,11 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
           name="symbol"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-gray-300">Symbol</FormLabel>
+              <FormLabel className={labelClass}>Symbol</FormLabel>
               <FormControl>
                 <Input
                   placeholder="e.g. RELIANCE"
-                  className="bg-gray-800 border-gray-600 text-white uppercase"
+                  className={`${inputClass} uppercase`}
                   {...field}
                 />
               </FormControl>
@@ -190,14 +194,9 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             name="entry_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300">Entry Price</FormLabel>
+                <FormLabel className={labelClass}>Entry Price</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    {...field}
-                  />
+                  <Input type="number" step="0.01" className={inputClass} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -208,14 +207,9 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             name="exit_price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300">Exit Price</FormLabel>
+                <FormLabel className={labelClass}>Exit Price</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    {...field}
-                  />
+                  <Input type="number" step="0.01" className={inputClass} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -229,13 +223,9 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300">Quantity</FormLabel>
+                <FormLabel className={labelClass}>Quantity</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    {...field}
-                  />
+                  <Input type="number" className={inputClass} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -246,14 +236,14 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             name="direction"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300">Direction</FormLabel>
+                <FormLabel className={labelClass}>Direction</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                    <SelectTrigger className={inputClass}>
                       <SelectValue placeholder="Direction" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="bg-gray-800 border-gray-600 text-white">
+                  <SelectContent className={selectContentClass}>
                     <SelectItem value="long">Long</SelectItem>
                     <SelectItem value="short">Short</SelectItem>
                   </SelectContent>
@@ -270,13 +260,9 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             name="entry_time"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300">Entry Time</FormLabel>
+                <FormLabel className={labelClass}>Entry Time</FormLabel>
                 <FormControl>
-                  <Input
-                    type="datetime-local"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    {...field}
-                  />
+                  <Input type="datetime-local" className={inputClass} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -287,13 +273,9 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             name="exit_time"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300">Exit Time</FormLabel>
+                <FormLabel className={labelClass}>Exit Time</FormLabel>
                 <FormControl>
-                  <Input
-                    type="datetime-local"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    {...field}
-                  />
+                  <Input type="datetime-local" className={inputClass} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -304,7 +286,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
         {pnl !== null && (
           <div
             className={`rounded-lg p-3 text-center font-semibold ${
-              pnl >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+              pnl >= 0 ? 'bg-teal-50 text-[#2d8b8b]' : 'bg-red-50 text-[#f0544f]'
             }`}
           >
             Calculated P&L: {formatCurrency(pnl)}
@@ -316,7 +298,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
             <Button
               type="button"
               variant="outline"
-              className="flex-1 border-gray-600 text-gray-300"
+              className="flex-1 border-teal-200 text-slate-600 hover:bg-teal-50 hover:!text-slate-800"
               onClick={onCancel}
             >
               Cancel
@@ -325,7 +307,7 @@ export default function TradeForm({ trade, onSuccess, onCancel }) {
           <Button
             type="submit"
             disabled={mutation.isPending}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+            className="flex-1 bg-[#2d8b8b] hover:bg-[#267a7a] text-white font-bold"
           >
             {mutation.isPending ? <Spinner className="mr-2" /> : null}
             {isEditing ? 'Update Trade' : 'Save Trade'}

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Smartphone, Share, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,31 +85,31 @@ function AuthPwaBanner() {
   if (!visible) return null;
 
   return (
-    <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-950/50 p-4">
+    <div className="mt-6 rounded-xl border border-teal-200 bg-teal-50/80 p-4">
       <div className="flex items-start gap-3">
-        <Smartphone className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+        <Smartphone className="h-5 w-5 text-teal-600 shrink-0 mt-0.5" />
         <div className="flex-1">
-          <p className="text-sm font-semibold text-white">Install for the best mobile experience</p>
+          <p className="text-sm font-semibold text-slate-800">Install for the best mobile experience</p>
           {ios ? (
-            <p className="text-xs text-gray-400 mt-1">
-              Tap <Share className="inline h-3 w-3" /> Share → <strong className="text-emerald-400">Add to Home Screen</strong>
+            <p className="text-xs text-slate-600 mt-1">
+              Tap <Share className="inline h-3 w-3" /> Share → <strong className="text-teal-700">Add to Home Screen</strong>
             </p>
           ) : deferredPrompt ? (
             <Button
               size="sm"
-              className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+              className="mt-2 bg-[#2d8b8b] hover:bg-[#267a7a] text-white h-8"
               onClick={handleInstall}
             >
               <Download className="h-3.5 w-3.5 mr-1.5" />
               Install App
             </Button>
           ) : (
-            <p className="text-xs text-gray-400 mt-1">
-              Use browser menu → <strong className="text-emerald-400">Install app</strong>
+            <p className="text-xs text-slate-600 mt-1">
+              Use browser menu → <strong className="text-teal-700">Install app</strong>
             </p>
           )}
         </div>
-        <button type="button" onClick={dismiss} className="text-gray-500 hover:text-gray-300">
+        <button type="button" onClick={dismiss} className="text-slate-400 hover:text-slate-600">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -212,30 +211,30 @@ export default function AuthPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <Spinner className="w-8 h-8 text-emerald-500" />
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex items-center justify-center">
+        <Spinner className="w-8 h-8 text-[#2d8b8b]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: -24 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm"
-      >
-        <div className="text-center mb-8">
-          <Logo className="h-14 mx-auto" textClassName="!text-white" />
-          <p className="text-gray-400 mt-3 text-sm">Your trading journal — web &amp; mobile</p>
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-72 h-72 bg-teal-200/30 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#f0544f]/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+
+      <div className="w-full max-w-sm relative z-10">
+        <div className="flex flex-col items-center mb-8">
+          <Logo className="h-14 w-14" showText={false} variant="light" />
+          <p className="font-heading font-bold text-xl text-slate-800 mt-3">Nivesh Pustika</p>
+          <p className="text-slate-600 mt-1 text-sm">Your trading journal — web &amp; mobile</p>
         </div>
 
-        <Card className="bg-gray-900 border-gray-700">
+        <Card className="bg-white/90 backdrop-blur-sm border-teal-200/60 shadow-xl shadow-teal-900/10">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl text-white">
+            <CardTitle className="text-2xl text-slate-800">
               {step === 'phone' ? 'Sign in' : 'Enter OTP'}
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-slate-600">
               {step === 'phone'
                 ? 'Use your mobile number or Google account'
                 : `Code sent to ${formattedPhone.replace('+91', '+91 ')}`}
@@ -246,7 +245,7 @@ export default function AuthPage() {
               <>
                 <Button
                   variant="outline"
-                  className="w-full border-gray-600 text-gray-200 hover:bg-gray-800"
+                  className="w-full border-slate-200 bg-white text-slate-700 hover:bg-teal-50 hover:border-teal-200 hover:!text-slate-800"
                   onClick={handleGoogle}
                   disabled={submitting}
                 >
@@ -256,20 +255,20 @@ export default function AuthPage() {
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-700" />
+                    <span className="w-full border-t border-teal-100" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-gray-900 px-2 text-gray-500">Or with mobile</span>
+                    <span className="bg-white px-2 text-slate-400">Or with mobile</span>
                   </div>
                 </div>
 
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div>
-                    <label htmlFor="phone" className="text-sm text-gray-300 block mb-2">
+                    <label htmlFor="phone" className="text-sm text-slate-700 block mb-2">
                       Mobile number
                     </label>
                     <div className="flex gap-2">
-                      <span className="flex items-center px-3 rounded-md bg-gray-800 border border-gray-600 text-gray-400 text-sm">
+                      <span className="flex items-center px-3 rounded-md bg-teal-50 border border-teal-200 text-teal-800 text-sm font-medium">
                         +91
                       </span>
                       <Input
@@ -280,7 +279,7 @@ export default function AuthPage() {
                         maxLength={10}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        className="bg-gray-800 border-gray-600 text-white flex-1"
+                        className="bg-white border-teal-200 text-slate-800 flex-1 focus-visible:ring-teal-500"
                         required
                       />
                     </div>
@@ -288,7 +287,7 @@ export default function AuthPage() {
                   <Button
                     type="submit"
                     disabled={submitting || phone.length !== 10}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                    className="w-full bg-[#2d8b8b] hover:bg-[#267a7a] text-white font-semibold shadow-md shadow-teal-900/15"
                   >
                     {submitting ? <Spinner className="mr-2" /> : null}
                     Send OTP
@@ -304,7 +303,7 @@ export default function AuthPage() {
                         <InputOTPSlot
                           key={i}
                           index={i}
-                          className="bg-gray-800 border-gray-600 text-white w-10 h-11"
+                          className="bg-white border-teal-200 text-slate-800 w-10 h-11"
                         />
                       ))}
                     </InputOTPGroup>
@@ -313,14 +312,14 @@ export default function AuthPage() {
                 <Button
                   type="submit"
                   disabled={submitting || otp.length !== 6}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                  className="w-full bg-[#2d8b8b] hover:bg-[#267a7a] text-white font-semibold shadow-md shadow-teal-900/15"
                 >
                   {submitting ? <Spinner className="mr-2" /> : null}
                   Verify &amp; Continue
                 </Button>
                 <button
                   type="button"
-                  className="w-full text-sm text-gray-400 hover:text-emerald-400"
+                  className="w-full text-sm text-slate-500 hover:text-teal-700"
                   onClick={() => {
                     setStep('phone');
                     setOtp('');
@@ -333,23 +332,23 @@ export default function AuthPage() {
 
             <AuthPwaBanner />
 
-            <p className="text-center text-xs text-gray-500 pt-2">
+            <p className="text-center text-xs text-slate-500 pt-2">
               Standard plan — full access for every user. No payment required.
             </p>
-            <p className="text-center text-xs text-gray-500">
+            <p className="text-center text-xs text-slate-500">
               By continuing, you agree to our{' '}
-              <Link to="/terms" className="text-emerald-500 hover:text-emerald-400 hover:underline">
+              <Link to="/terms" className="text-teal-700 hover:text-teal-800 hover:underline">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link to="/privacy" className="text-emerald-500 hover:text-emerald-400 hover:underline">
+              <Link to="/privacy" className="text-teal-700 hover:text-teal-800 hover:underline">
                 Privacy Policy
               </Link>
               .
             </p>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }
