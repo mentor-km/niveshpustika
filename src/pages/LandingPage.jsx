@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { CinematicLandingHero } from '@/components/Landing/CinematicLandingHero';
+import { useAuth } from '@/hooks/useAuth';
+import { isStandalone } from '@/lib/pwa';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!isStandalone() || loading) return;
+    navigate(user ? '/dashboard' : '/app', { replace: true });
+  }, [user, loading, navigate]);
+
+  if (isStandalone() && loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] via-[#f0fdfa] to-[#ecfdf5] flex items-center justify-center">
+        <Spinner className="w-8 h-8 text-[#2d8b8b]" />
+      </div>
+    );
+  }
+
+  if (isStandalone()) {
+    return null;
+  }
+
   return (
     <>
       <Helmet>

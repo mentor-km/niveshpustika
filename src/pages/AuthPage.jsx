@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Smartphone, Share, Download, X } from 'lucide-react';
+import { Smartphone, Share, Download, X, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,6 +19,7 @@ import {
   signInWithGoogle,
   formatPhone,
 } from '@/lib/supabase';
+import { isMobileDevice, isIOS, isAndroid, isStandalone } from '@/lib/pwa';
 
 const GoogleIcon = (props) => (
   <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -28,21 +29,6 @@ const GoogleIcon = (props) => (
     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
   </svg>
 );
-
-function isMobileDevice() {
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-}
-
-function isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-}
-
-function isStandalone() {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true
-  );
-}
 
 function AuthPwaBanner() {
   const [visible, setVisible] = useState(false);
@@ -94,19 +80,32 @@ function AuthPwaBanner() {
             <p className="text-xs text-slate-600 mt-1">
               Tap <Share className="inline h-3 w-3" /> Share → <strong className="text-teal-700">Add to Home Screen</strong>
             </p>
-          ) : deferredPrompt ? (
-            <Button
-              size="sm"
-              className="mt-2 bg-[#2d8b8b] hover:bg-[#267a7a] text-white h-8"
-              onClick={handleInstall}
-            >
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              Install App
-            </Button>
           ) : (
-            <p className="text-xs text-slate-600 mt-1">
-              Use browser menu → <strong className="text-teal-700">Install app</strong>
-            </p>
+            <>
+              {deferredPrompt && (
+                <Button
+                  size="sm"
+                  className="mt-2 bg-[#2d8b8b] hover:bg-[#267a7a] text-white h-8"
+                  onClick={handleInstall}
+                >
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Install App
+                </Button>
+              )}
+              {isAndroid() ? (
+                <p className={`text-xs text-slate-600 ${deferredPrompt ? 'mt-2' : 'mt-1'}`}>
+                  {deferredPrompt ? 'Or tap ' : 'Tap '}
+                  <MoreVertical className="inline h-3 w-3" /> menu (top right) →{' '}
+                  <strong className="text-teal-700">Install app</strong> or{' '}
+                  <strong className="text-teal-700">Add to Home screen</strong>
+                </p>
+              ) : (
+                <p className={`text-xs text-slate-600 ${deferredPrompt ? 'mt-2' : 'mt-1'}`}>
+                  Open browser menu → <strong className="text-teal-700">Install app</strong> or{' '}
+                  <strong className="text-teal-700">Add to Home screen</strong>
+                </p>
+              )}
+            </>
           )}
         </div>
         <button type="button" onClick={dismiss} className="text-slate-400 hover:text-slate-600">

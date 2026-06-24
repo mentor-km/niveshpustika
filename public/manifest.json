@@ -2,7 +2,7 @@
   "name": "Nivesh Pustika",
   "short_name": "Nivesh Pustika",
   "description": "Trading Journal & Trade Tracker — log trades, track performance, and see smart analytics.",
-  "start_url": "/",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#f0fdfa",
   "theme_color": "#2d8b8b",
