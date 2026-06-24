@@ -13,13 +13,9 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TermsOfServicePage from '@/pages/TermsOfServicePage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/hooks/useAuth';
-import { registerSW } from 'virtual:pwa-register';
 import '@/index.css';
-
-if ('serviceWorker' in navigator) {
-  registerSW({ immediate: true });
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,10 +85,12 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

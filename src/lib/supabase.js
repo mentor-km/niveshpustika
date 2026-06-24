@@ -120,8 +120,43 @@ export function formatCurrency(value) {
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 
-export async function sendPhoneOtp(phone) {
+export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
+
+export function isTurnstileRequired() {
+  return Boolean(TURNSTILE_SITE_KEY);
+}
+
+async function sendPhoneOtpViaEdgeFunction(formatted, turnstileToken) {
+  const res = await fetch(`${supabaseUrl}/functions/v1/send-phone-otp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseAnonKey,
+    },
+    body: JSON.stringify({ phone: formatted, turnstileToken }),
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(body.error || 'Could not send OTP');
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
+export async function sendPhoneOtp(phone, { turnstileToken } = {}) {
   const formatted = formatPhone(phone);
+
+  if (isTurnstileRequired()) {
+    if (!turnstileToken) {
+      throw new Error('Please complete the security check.');
+    }
+    await sendPhoneOtpViaEdgeFunction(formatted, turnstileToken);
+    return { phone: formatted, data: null };
+  }
+
   const { data, error } = await supabase.auth.signInWithOtp({
     phone: formatted,
     options: { channel: 'sms' },

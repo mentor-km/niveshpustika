@@ -18,10 +18,17 @@ import {
   verifyPhoneOtp,
   signInWithGoogle,
   formatPhone,
+  isTurnstileRequired,
 } from '@/lib/supabase';
+import {
+  canSendOtp,
+  recordOtpSend,
+  formatOtpRateLimitMessage,
+  parseOtpSendError,
+  OTP_COOLDOWN_SECONDS,
+} from '@/lib/otpRateLimit';
+import TurnstileWidget from '@/components/TurnstileWidget';
 import { isMobileDevice, isIOS, isAndroid, isStandalone } from '@/lib/pwa';
-
-const OTP_COOLDOWN_SECONDS = 60;
 
 function parseAuthErrorFromUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -146,7 +153,9 @@ export default function AuthPage() {
   const [otp, setOtp] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formattedPhone, setFormattedPhone] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   useEffect(() => {
     const authError = parseAuthErrorFromUrl();
@@ -161,12 +170,20 @@ export default function AuthPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (step !== 'otp' || resendCooldown <= 0) return undefined;
+    if (otpCooldown <= 0) return undefined;
     const timer = setInterval(() => {
-      setResendCooldown((seconds) => (seconds <= 1 ? 0 : seconds - 1));
+      setOtpCooldown((seconds) => (seconds <= 1 ? 0 : seconds - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [step, resendCooldown]);
+  }, [otpCooldown]);
+
+  useEffect(() => {
+    if (step !== 'phone' || phone.length !== 10) return;
+    const check = canSendOtp(phone);
+    if (!check.allowed && check.reason === 'cooldown') {
+      setOtpCooldown((current) => Math.max(current, check.waitSeconds));
+    }
+  }, [step, phone]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -174,9 +191,13 @@ export default function AuthPage() {
     }
   }, [user, authLoading, navigate]);
 
-  const handleSendOtp = async (e) => {
-    e.preventDefault();
-    const digits = phone.replace(/\D/g, '');
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    setTurnstileKey((key) => key + 1);
+  };
+
+  const requestOtp = async (rawPhone, { isResend = false } = {}) => {
+    const digits = rawPhone.replace(/\D/g, '').slice(-10);
     if (digits.length !== 10) {
       toast({
         variant: 'destructive',
@@ -185,26 +206,55 @@ export default function AuthPage() {
       });
       return;
     }
+
+    const rateCheck = canSendOtp(digits);
+    if (!rateCheck.allowed) {
+      setOtpCooldown(rateCheck.waitSeconds);
+      toast({
+        variant: 'destructive',
+        title: 'Please wait',
+        description: formatOtpRateLimitMessage(rateCheck),
+      });
+      return;
+    }
+
+    if (isTurnstileRequired() && !turnstileToken) {
+      toast({
+        variant: 'destructive',
+        title: 'Security check required',
+        description: 'Complete the captcha below before sending OTP.',
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const { phone: formatted } = await sendPhoneOtp(phone);
+      const { phone: formatted } = await sendPhoneOtp(digits, { turnstileToken });
+      recordOtpSend(digits);
       setFormattedPhone(formatted);
       setStep('otp');
-      setResendCooldown(OTP_COOLDOWN_SECONDS);
+      setOtpCooldown(OTP_COOLDOWN_SECONDS);
+      resetTurnstile();
       toast({
-        title: 'OTP Sent',
-        description: `Check SMS on ${formatPhone(phone).replace('+91', '+91 ')}`,
+        title: isResend ? 'OTP resent' : 'OTP Sent',
+        description: `Check SMS on ${formatPhone(digits).replace('+91', '+91 ')}`,
         className: 'bg-emerald-500 text-white',
       });
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Could not send OTP',
-        description: error.message || 'Please try again.',
+        title: isResend ? 'Could not resend OTP' : 'Could not send OTP',
+        description: parseOtpSendError(error),
       });
+      resetTurnstile();
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    await requestOtp(phone);
   };
 
   const handleVerifyOtp = async (e) => {
@@ -238,32 +288,8 @@ export default function AuthPage() {
   };
 
   const handleResendOtp = async () => {
-    if (resendCooldown > 0 || submitting) return;
-    const digits = (formattedPhone || phone).replace(/\D/g, '').slice(-10);
-    if (digits.length !== 10) {
-      setStep('phone');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const { phone: formatted } = await sendPhoneOtp(digits);
-      setFormattedPhone(formatted);
-      setOtp('');
-      setResendCooldown(OTP_COOLDOWN_SECONDS);
-      toast({
-        title: 'OTP resent',
-        description: `New code sent to ${formatPhone(digits).replace('+91', '+91 ')}`,
-        className: 'bg-emerald-500 text-white',
-      });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not resend OTP',
-        description: error.message || 'Please try again.',
-      });
-    } finally {
-      setSubmitting(false);
-    }
+    if (otpCooldown > 0 || submitting) return;
+    await requestOtp(formattedPhone || phone, { isResend: true });
   };
 
   const handleGoogle = async () => {
@@ -355,13 +381,26 @@ export default function AuthPage() {
                       />
                     </div>
                   </div>
+                  {isTurnstileRequired() && (
+                    <TurnstileWidget
+                      key={turnstileKey}
+                      onSuccess={setTurnstileToken}
+                      onExpire={() => setTurnstileToken('')}
+                      onError={() => setTurnstileToken('')}
+                    />
+                  )}
                   <Button
                     type="submit"
-                    disabled={submitting || phone.length !== 10}
+                    disabled={
+                      submitting ||
+                      phone.length !== 10 ||
+                      otpCooldown > 0 ||
+                      (isTurnstileRequired() && !turnstileToken)
+                    }
                     className="w-full bg-[#2d8b8b] hover:bg-[#267a7a] text-white font-semibold shadow-md shadow-teal-900/15"
                   >
                     {submitting ? <Spinner className="mr-2" /> : null}
-                    Send OTP
+                    {otpCooldown > 0 ? `Send OTP in ${otpCooldown}s` : 'Send OTP'}
                   </Button>
                 </form>
               </>
@@ -389,14 +428,26 @@ export default function AuthPage() {
                   Verify &amp; Continue
                 </Button>
                 <div className="flex flex-col gap-2">
+                  {isTurnstileRequired() && (
+                    <TurnstileWidget
+                      key={`resend-${turnstileKey}`}
+                      onSuccess={setTurnstileToken}
+                      onExpire={() => setTurnstileToken('')}
+                      onError={() => setTurnstileToken('')}
+                    />
+                  )}
                   <button
                     type="button"
                     className="w-full text-sm text-teal-700 hover:text-teal-800 disabled:text-slate-400 disabled:cursor-not-allowed"
                     onClick={handleResendOtp}
-                    disabled={submitting || resendCooldown > 0}
+                    disabled={
+                      submitting ||
+                      otpCooldown > 0 ||
+                      (isTurnstileRequired() && !turnstileToken)
+                    }
                   >
-                    {resendCooldown > 0
-                      ? `Resend OTP in ${resendCooldown}s`
+                    {otpCooldown > 0
+                      ? `Resend OTP in ${otpCooldown}s`
                       : 'Resend OTP'}
                   </button>
                   <button
@@ -405,7 +456,8 @@ export default function AuthPage() {
                     onClick={() => {
                       setStep('phone');
                       setOtp('');
-                      setResendCooldown(0);
+                      setOtpCooldown(0);
+                      resetTurnstile();
                     }}
                   >
                     Change number

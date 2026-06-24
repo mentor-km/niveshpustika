@@ -29,8 +29,40 @@ Set in **Vercel → Project → Settings → Environment Variables**:
 | `VITE_SUPABASE_ANON_KEY` | Yes | Anon/public key |
 | `VITE_ADMIN_EMAIL` | Yes | Must match Supabase `is_admin()` |
 | `VITE_ADMIN_PHONE` | Optional | Last 10 digits must match SQL |
+| `VITE_TURNSTILE_SITE_KEY` | Production OTP | Cloudflare Turnstile site key; omit locally for direct OTP |
 
 Redeploy after changing env vars.
+
+---
+
+## Pre-launch security (dashboard)
+
+Complete these in provider dashboards before heavy traffic or ads.
+
+### Supabase Auth rate limits
+
+**Supabase → Project Settings → Authentication → Rate Limits**
+
+| Limit | Recommended |
+|-------|-------------|
+| SMS OTP sends (per hour) | 4–6 per phone/IP |
+| Sign-in / token refresh | Defaults usually fine |
+
+Also review **Authentication → Providers → Phone** and confirm Twilio is connected.
+
+### Twilio spending controls
+
+**Twilio Console → Billing → Alerts** and **Usage triggers**
+
+1. Set a **daily spending cap** (e.g. ₹500–1000 to start).
+2. Enable **email/SMS alerts** at 50%, 80%, and 100% of budget.
+3. Monitor **Monitor → Logs → Messaging** for abuse spikes.
+
+Client-side cooldown (60s between sends, 5/hour per number) reduces accidental churn; server limits are the real guardrail.
+
+### Cloudflare Turnstile + OTP Edge Function
+
+Production phone OTP goes through `send-phone-otp` when `VITE_TURNSTILE_SITE_KEY` is set. See [TURNSTILE-SETUP.md](./TURNSTILE-SETUP.md).
 
 ---
 

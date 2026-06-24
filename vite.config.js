@@ -284,8 +284,8 @@ export default defineConfig({
 		...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), iframeRouteRestorationPlugin(), selectionModePlugin()] : []),
 		react(),
 		VitePWA({
-			registerType: 'autoUpdate',
-			includeAssets: ['logo.png'],
+			registerType: 'prompt',
+			includeAssets: ['logo.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png'],
 			manifest: false,
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
