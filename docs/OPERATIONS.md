@@ -64,6 +64,10 @@ Client-side cooldown (60s between sends, 5/hour per number) reduces accidental c
 
 Production phone OTP goes through `send-phone-otp` when `VITE_TURNSTILE_SITE_KEY` is set. See [TURNSTILE-SETUP.md](./TURNSTILE-SETUP.md).
 
+### Admin SMS on new signup
+
+Edge Function `notify-new-user` + Database Webhook on `profiles` INSERT. See [NEW-USER-NOTIFY.md](./NEW-USER-NOTIFY.md).
+
 ---
 
 ## Database migrations

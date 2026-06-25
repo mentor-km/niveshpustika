@@ -26,6 +26,7 @@ All project documentation lives in this folder.
 | [AUTH-SETUP-GUIDE.md](./AUTH-SETUP-GUIDE.md) | Full Supabase auth configuration |
 | [phone-auth-setup.md](./phone-auth-setup.md) | Phone OTP (SMS) setup |
 | [TURNSTILE-SETUP.md](./TURNSTILE-SETUP.md) | Turnstile captcha + OTP Edge Function |
+| [NEW-USER-NOTIFY.md](./NEW-USER-NOTIFY.md) | Admin SMS when a new user signs up |
 | [instruments-setup.md](./instruments-setup.md) | Kite instrument sync |
 
 ## Planning
